@@ -656,22 +656,33 @@ pub async fn Mocket::serve_on_until_with(
   defer cleanup_native_ws_runtime(ws_runtime_id)
   match resolve_native_shutdown_timeout_ms(options) {
     Some(timeout_ms) => {
-      // Graceful shutdown with manual accept loop:
-      // 1. Accept connections in a loop; each handler runs in a task group.
-      // 2. On shutdown signal, server.close() causes accept() to fail, exiting the loop.
-      // 3. The task group waits for all spawned handlers to complete.
-      // 4. A hard timeout cancels any remaining handlers if drain takes too long.
+      // Fail-fast: validate all options before starting the server
       let max_connections = resolve_native_max_connections(options)
+      let _ = resolve_native_max_request_body_bytes(options)
+      let _ = resolve_native_request_body_read_timeout_ms(options)
+      let _ = resolve_native_handler_timeout_ms(options)
+      let _ = resolve_native_websocket_max_message_bytes(options)
+      let _ = resolve_native_websocket_outgoing_queue_capacity(options)
+      let _ = resolve_native_websocket_overflow_policy(options)
+      let _ = resolve_native_websocket_read_timeout_ms(options)
+      // Graceful shutdown with manual accept loop:
+      // 1. Accept connections in a loop; each handler is a group child.
+      // 2. On shutdown signal, server.close() causes accept() to fail.
+      // 3. Accept loop (no_wait=true) is cancelled on group exit.
+      // 4. Handler tasks (no_wait=false) are waited for by the group.
+      // 5. Outer with_timeout_opt enforces the hard deadline.
+      // Uses a single shutdown waiter to avoid the race with shutdown.put(()).
       let sem : @async.Semaphore? = match max_connections {
         Some(n) => Some(@async.Semaphore::new(n))
         None => None
       }
-      @async.any([
-        () => {
+      // Hard timeout wraps the entire drain. If handlers don't finish
+      // within timeout_ms after shutdown, everything is cancelled.
+      ignore(
+        @async.with_timeout_opt(timeout_ms, () => {
           @async.with_task_group(group => {
-            // Spawn the accept loop in the group so handlers are children
-            group.spawn_bg(no_wait=true, () => {
-              // Accept loop: exits when server.close() causes accept to fail
+            // Accept loop: no_wait=true so it's cancelled on group exit
+            group.spawn_bg(no_wait=true, allow_failure=true, () => {
               for ;; {
                 let conn_result : Result[
                   (@http.ServerConnection, @socket.Addr),
@@ -684,40 +695,46 @@ pub async fn Mocket::serve_on_until_with(
                       Some(s) => s.acquire()
                       None => ()
                     }
-                    group.spawn_bg(no_wait=true, () => {
+                    // Handler task: no_wait=false (default), group waits for it
+                    group.spawn_bg(allow_failure=true, () => {
                       defer (match sem {
                         Some(s) => s.release()
                         None => ()
                       })
-                      let request_result : Result[@http.Request, Error] = try? conn.read_request()
-                      match request_result {
-                        Ok(request) => {
-                          let body_reader : &@io.Reader = conn
-                          handle_request_async(
-                            self, ws_runtime_id, request, body_reader, conn, options,
-                          ) catch {
-                            _ => ()
+                      // Keep-alive loop: serve multiple requests per connection
+                      for ;; {
+                        let request_result : Result[@http.Request, Error] = try? conn.read_request()
+                        match request_result {
+                          Ok(request) => {
+                            let body_reader : &@io.Reader = conn
+                            handle_request_async(
+                              self, ws_runtime_id, request, body_reader, conn, options,
+                            ) catch {
+                              _ => {
+                                conn.close()
+                                break
+                              }
+                            }
+                          }
+                          Err(_) => {
+                            conn.close()
+                            break
                           }
                         }
-                        Err(_) => conn.close()
                       }
                     })
                   }
                 }
               }
             })
-            // Wait for shutdown signal, then close server
+            // Single shutdown waiter
             wait_for_shutdown_signal(shutdown)
             server.close()
-            // Task group now waits for all spawned handlers to finish
+            // Main function returns. Accept loop (no_wait) is cancelled.
+            // Group waits for handler tasks (no_wait=false) to finish.
           })
-        },
-        // Hard timeout: shutdown signal + drain timeout
-        async fn() {
-          wait_for_shutdown_signal(shutdown)
-          @async.sleep(timeout_ms)
-        },
-      ])
+        }),
+      )
     }
     None =>
       // Default: cancellation-based (abort active requests)
