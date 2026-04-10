@@ -1,31 +1,48 @@
 ///|
 /// Returns a middleware that sets common security response headers.
 ///
-/// All parameters are optional and have safe defaults. Pass `""` to disable a
-/// specific header entirely.
+/// The four base headers (X-Content-Type-Options, X-Frame-Options,
+/// X-XSS-Protection, Referrer-Policy) are always applied as safe defaults.
 ///
-/// - `hsts` — `Strict-Transport-Security` value (default: `"max-age=63072000; includeSubDomains"`). Only meaningful over TLS.
-/// - `csp` — `Content-Security-Policy` value (default: `"default-src 'self'"`).
-/// - `permissions_policy` — `Permissions-Policy` value (default: `"camera=(), microphone=(), geolocation=()"`).
+/// The three policy headers are opt-in (default `""` = disabled) to avoid
+/// breaking existing apps that rely on inline scripts or third-party assets:
+///
+/// - `hsts` — `Strict-Transport-Security` value. Only meaningful over TLS.
+/// - `csp` — `Content-Security-Policy` value.
+/// - `permissions_policy` — `Permissions-Policy` value.
+///
+/// Headers already set by a handler or inner middleware are preserved (not
+/// overwritten) so that per-route policies take precedence.
 pub fn security_headers(
-  hsts? : String = "max-age=63072000; includeSubDomains",
-  csp? : String = "default-src 'self'",
-  permissions_policy? : String = "camera=(), microphone=(), geolocation=()",
+  hsts? : String = "",
+  csp? : String = "",
+  permissions_policy? : String = "",
 ) -> Middleware {
   (event, next) => {
     let res = next()
-    event.res.headers.set("X-Content-Type-Options", "nosniff")
-    event.res.headers.set("X-Frame-Options", "DENY")
-    event.res.headers.set("X-XSS-Protection", "0")
-    event.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
+    let h = event.res.headers
+    @mhttp.set_missing_header_case_insensitive(
+      h, "X-Content-Type-Options", "nosniff",
+    )
+    @mhttp.set_missing_header_case_insensitive(h, "X-Frame-Options", "DENY")
+    @mhttp.set_missing_header_case_insensitive(h, "X-XSS-Protection", "0")
+    @mhttp.set_missing_header_case_insensitive(
+      h, "Referrer-Policy", "strict-origin-when-cross-origin",
+    )
     if hsts != "" {
-      event.res.headers.set("Strict-Transport-Security", hsts)
+      @mhttp.set_missing_header_case_insensitive(
+        h, "Strict-Transport-Security", hsts,
+      )
     }
     if csp != "" {
-      event.res.headers.set("Content-Security-Policy", csp)
+      @mhttp.set_missing_header_case_insensitive(
+        h, "Content-Security-Policy", csp,
+      )
     }
     if permissions_policy != "" {
-      event.res.headers.set("Permissions-Policy", permissions_policy)
+      @mhttp.set_missing_header_case_insensitive(
+        h, "Permissions-Policy", permissions_policy,
+      )
     }
     res
   }
