@@ -18,34 +18,37 @@ async test "resource registers all CRUD routes" {
     { id: 2, name: "Beta" },
   ]
   let app = @crescent.Mocket()
-  app.resource("/api/items", ResourceConfig(
-    list=(_event => @crescent.HttpResponse::ok().json_value(items)),
-    get=(event => {
-      let id = event.require_param_int("id")
-      for item in items {
-        if item.id == id {
-          return @crescent.HttpResponse::ok().json_value(item)
+  app.resource(
+    "/api/items",
+    ResourceConfig(
+      list=_event => @crescent.HttpResponse::ok().json_value(items),
+      get=event => {
+        let id = event.require_param_int("id")
+        for item in items {
+          if item.id == id {
+            return @crescent.HttpResponse::ok().json_value(item)
+          }
         }
-      }
-      raise @crescent.HttpError::HttpError(NotFound, "not found")
-    }),
-    create=(event => {
-      let input : CreateItem = event.json()
-      let item = ResourceItem::{ id: 3, name: input.name }
-      items.push(item)
-      @crescent.HttpResponse::created().json_value(item)
-    }),
-    update=(event => {
-      let id = event.require_param_int("id")
-      let input : CreateItem = event.json()
-      let item = ResourceItem::{ id, name: input.name }
-      @crescent.HttpResponse::ok().json_value(item)
-    }),
-    delete=(event => {
-      let _id = event.require_param_int("id")
-      @crescent.HttpResponse::no_content()
-    }),
-  ))
+        raise @crescent.HttpError::HttpError(NotFound, "not found")
+      },
+      create=event => {
+        let input : CreateItem = event.json()
+        let item = ResourceItem::{ id: 3, name: input.name }
+        items.push(item)
+        @crescent.HttpResponse::created().json_value(item)
+      },
+      update=event => {
+        let id = event.require_param_int("id")
+        let input : CreateItem = event.json()
+        let item = ResourceItem::{ id, name: input.name }
+        @crescent.HttpResponse::ok().json_value(item)
+      },
+      delete=event => {
+        let _id = event.require_param_int("id")
+        @crescent.HttpResponse::no_content()
+      },
+    ),
+  )
   let client = @crescent.TestClient(app)
   // GET /api/items — list
   let res = client.get("/api/items")
@@ -56,9 +59,12 @@ async test "resource registers all CRUD routes" {
   let res2 = client.get("/api/items/1")
   assert_eq(res2.status, OK)
   let item : ResourceItem = res2.body_json()
-  debug_inspect(item, content=(
-    #|{ id: 1, name: "Alpha" }
-  ))
+  debug_inspect(
+    item,
+    content=(
+      #|{ id: 1, name: "Alpha" }
+    ),
+  )
   // GET /api/items/999 — not found
   let res3 = client.get("/api/items/999")
   assert_eq(res3.status, NotFound)
@@ -86,9 +92,10 @@ async test "resource registers all CRUD routes" {
 ///|
 async test "resource with partial config only registers provided handlers" {
   let app = @crescent.Mocket()
-  app.resource("/api/readonly", ResourceConfig(
-    list =  (_ => @crescent.HttpResponse::ok().json_value([1, 2, 3]))
-  ))
+  app.resource(
+    "/api/readonly",
+    ResourceConfig(list=_ => @crescent.HttpResponse::ok().json_value([1, 2, 3])),
+  )
   let client = @crescent.TestClient(app)
   // GET works
   let res = client.get("/api/readonly")
