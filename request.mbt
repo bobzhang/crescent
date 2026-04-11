@@ -84,6 +84,18 @@ pub fn HttpRequest::content_type(self : HttpRequest) -> String? {
   self.get_header("content-type")
 }
 
+///|
+/// Retrieves a cookie by name from the request's Cookie header, if present.
+pub fn HttpRequest::get_cookie(
+  self : HttpRequest,
+  name : String,
+) -> @cookie.CookieItem? {
+  match self.get_header("cookie") {
+    Some(cookie) => @cookie.parse_cookie(cookie).get(name)
+    None => None
+  }
+}
+
 /// Returns the cached parsed query params, parsing the URL on first access.
 /// Private — external callers should use `query_params()` or `get_query()`
 /// which return owned copies.
