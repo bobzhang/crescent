@@ -11,8 +11,6 @@ import {
 }
 
 // Values
-pub fn async_run(async () -> Unit noraise) -> Unit
-
 pub async fn fetch(String, body? : String, HttpMethod, data? : &Responder, headers? : Map[String, String], credentials? : FetchCredentials, mode? : FetchMode) -> HttpResponse
 
 pub fn html(&Show) -> &Responder
@@ -173,7 +171,6 @@ pub fn Mocket::put_raw(Self, String, async (MocketEvent) -> &Responder noraise) 
 pub fn Mocket::resource(Self, String, ResourceConfig) -> Unit
 pub fn Mocket::routes(Self) -> Iter[(String, String)]
 pub async fn Mocket::serve(Self, port~ : Int) -> Unit
-pub fn Mocket::serve_blocking(Self, port~ : Int) -> Unit
 pub async fn Mocket::serve_on(Self, @http.Server) -> Unit
 pub async fn Mocket::serve_on_until(Self, @http.Server, @aqueue.Queue[Unit]) -> Unit
 pub async fn Mocket::serve_on_until_with(Self, @http.Server, @aqueue.Queue[Unit], NativeServeOptions) -> Unit
