@@ -28,7 +28,7 @@ test "request_method_to_string converts all HTTP methods" {
 ///|
 test "append_cookie_headers with empty cookies does nothing" {
   let headers : Map[String, String] = {}
-  let cookies : Map[String, CookieItem] = {}
+  let cookies : Map[String, @cookie.CookieItem] = {}
   append_cookie_headers(headers, cookies)
   inspect(headers.contains("Set-Cookie"), content="false")
 }
@@ -36,7 +36,7 @@ test "append_cookie_headers with empty cookies does nothing" {
 ///|
 test "append_cookie_headers with single cookie sets header" {
   let headers : Map[String, String] = {}
-  let cookies : Map[String, CookieItem] = {}
+  let cookies : Map[String, @cookie.CookieItem] = {}
   cookies.set("session", {
     name: "session",
     value: "abc123",
@@ -59,7 +59,7 @@ test "append_cookie_headers with single cookie sets header" {
 ///|
 test "append_cookie_headers with multiple cookies joins with CRLF Set-Cookie" {
   let headers : Map[String, String] = {}
-  let cookies : Map[String, CookieItem] = {}
+  let cookies : Map[String, @cookie.CookieItem] = {}
   cookies.set("a", {
     name: "a",
     value: "1",

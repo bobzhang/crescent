@@ -1,0 +1,42 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/crescent/cookie"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn cookie_to_string(Array[CookieItem]) -> String
+
+pub fn parse_cookie(StringView) -> Map[String, CookieItem]
+
+// Errors
+
+// Types and methods
+pub(all) struct CookieItem {
+  name : String
+  value : String
+  max_age : Int?
+  path : String?
+  domain : String?
+  secure : Bool?
+  http_only : Bool?
+  same_site : SameSiteOption?
+
+  fn new(name~ : String, value~ : String, max_age? : Int, path? : String, domain? : String, secure? : Bool, http_only? : Bool, same_site? : SameSiteOption) -> CookieItem
+} derive(Eq, @debug.Debug)
+pub fn CookieItem::new(name~ : String, value~ : String, max_age? : Int, path? : String, domain? : String, secure? : Bool, http_only? : Bool, same_site? : SameSiteOption) -> Self
+pub impl Show for CookieItem
+
+pub(all) enum SameSiteOption {
+  Lax
+  Strict
+  SameSiteNone
+} derive(Eq, @debug.Debug)
+pub impl Show for SameSiteOption
+pub impl ToJson for SameSiteOption
+
+// Type aliases
+
+// Traits
+

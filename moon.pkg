@@ -2,6 +2,7 @@ import {
   "bobzhang/crescent/uri" @uri,
   "bobzhang/crescent/http" @mhttp,
   "bobzhang/crescent/router" @router,
+  "bobzhang/crescent/cookie" @cookie,
   "moonbitlang/async",
   "moonbitlang/async/http",
   "moonbitlang/async/io",

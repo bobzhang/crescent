@@ -50,7 +50,7 @@ fn next_ws_serve_runtime_id(app : Mocket) -> String {
 ///|
 fn append_cookie_headers(
   headers : Map[String, String],
-  cookies : Map[String, CookieItem],
+  cookies : Map[String, @cookie.CookieItem],
 ) -> Unit {
   if cookies.is_empty() {
     return

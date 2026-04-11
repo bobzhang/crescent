@@ -3,13 +3,13 @@
 pub(all) struct HttpResponse {
   mut status_code : StatusCode
   headers : Map[String, String]
-  cookies : Map[String, CookieItem]
+  cookies : Map[String, @cookie.CookieItem]
   mut raw_body : Bytes
 
   fn new(
     status_code~ : StatusCode,
     headers? : Map[String, String],
-    cookies? : Map[String, CookieItem],
+    cookies? : Map[String, @cookie.CookieItem],
     raw_body? : Bytes,
   ) -> HttpResponse
   // TODO: better error message when using skip
@@ -28,7 +28,7 @@ pub fn[T : BodyReader] HttpResponse::read_body(self : HttpResponse) -> T raise {
 pub fn HttpResponse::new(
   status_code~ : StatusCode,
   headers? : Map[String, String],
-  cookies? : Map[String, CookieItem],
+  cookies? : Map[String, @cookie.CookieItem],
   raw_body? : Bytes,
 ) -> HttpResponse {
   {
@@ -104,6 +104,38 @@ pub fn HttpResponse::header(
 /// Converts this response into a `Responder` trait object for use as a handler return value.
 pub fn HttpResponse::to_responder(self : HttpResponse) -> &Responder {
   self
+}
+
+///|
+/// Sets a cookie on the response with the given name, value, and optional attributes.
+pub fn HttpResponse::set_cookie(
+  self : HttpResponse,
+  name : String,
+  value : String,
+  max_age? : Int,
+  path? : String,
+  domain? : String,
+  secure? : Bool,
+  http_only? : Bool,
+  same_site? : @cookie.SameSiteOption,
+) -> Unit {
+  let item = @cookie.CookieItem(
+    name~,
+    value~,
+    max_age?,
+    path?,
+    domain?,
+    secure?,
+    http_only?,
+    same_site?,
+  )
+  self.cookies.set(name, item)
+}
+
+///|
+/// Deletes a cookie by setting its value to empty and max-age to 0.
+pub fn HttpResponse::delete_cookie(self : HttpResponse, key : String) -> Unit {
+  self.set_cookie(key, "", max_age=0)
 }
 
 ///|

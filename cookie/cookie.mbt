@@ -1,45 +1,117 @@
 ///|
-/// Sets a cookie on the response with the given name, value, and optional attributes.
-pub fn HttpResponse::set_cookie(
-  self : HttpResponse,
-  name : String,
-  value : String,
+/// The SameSite attribute for cookies, controlling cross-site request behavior.
+pub(all) enum SameSiteOption {
+  Lax
+  Strict
+  SameSiteNone
+} derive(Debug, Eq)
+
+///|
+pub impl Show for SameSiteOption with output(self, logger) {
+  match self {
+    Lax => logger.write_string("Lax")
+    Strict => logger.write_string("Strict")
+    SameSiteNone => logger.write_string("SameSiteNone")
+  }
+}
+
+///|
+pub impl ToJson for SameSiteOption with to_json(self : SameSiteOption) -> Json {
+  match self {
+    Lax => "lax"
+    Strict => "strict"
+    SameSiteNone => "none"
+  }
+}
+
+///|
+/// Represents an HTTP cookie with its name, value, and optional attributes.
+pub(all) struct CookieItem {
+  name : String
+  value : String
+  max_age : Int?
+  path : String?
+  domain : String?
+  secure : Bool?
+  http_only : Bool?
+  same_site : SameSiteOption?
+
+  fn new(
+    name~ : String,
+    value~ : String,
+    max_age? : Int,
+    path? : String,
+    domain? : String,
+    secure? : Bool,
+    http_only? : Bool,
+    same_site? : SameSiteOption,
+  ) -> CookieItem
+} derive(Eq, Debug)
+
+///|
+/// Creates a new `CookieItem` with the given name, value, and optional attributes.
+pub fn CookieItem::new(
+  name~ : String,
+  value~ : String,
   max_age? : Int,
   path? : String,
   domain? : String,
   secure? : Bool,
   http_only? : Bool,
   same_site? : SameSiteOption,
-) -> Unit {
-  let item = CookieItem(
-    name~,
-    value~,
-    max_age?,
-    path?,
-    domain?,
-    secure?,
-    http_only?,
-    same_site?,
-  )
-  self.cookies.set(name, item)
+) -> CookieItem {
+  { name, value, max_age, path, domain, secure, http_only, same_site }
 }
 
 ///|
-/// Retrieves a cookie by name from the request's Cookie header, if present.
-pub fn HttpRequest::get_cookie(
-  self : HttpRequest,
-  name : String,
-) -> CookieItem? {
-  match self.get_header("cookie") {
-    Some(cookie) => parse_cookie(cookie).get(name)
-    None => None
+fn sanitize_cookie_value(s : String) -> String {
+  if s.contains("\r") || s.contains("\n") || s.contains(";") {
+    let buf = StringBuilder::new()
+    for c in s {
+      if c != '\r' && c != '\n' && c != ';' {
+        buf.write_char(c)
+      }
+    }
+    buf.to_string()
+  } else {
+    s
   }
 }
 
 ///|
-/// Deletes a cookie by setting its value to empty and max-age to 0.
-pub fn HttpResponse::delete_cookie(self : HttpResponse, key : String) -> Unit {
-  self.set_cookie(key, "", max_age=0)
+pub impl Show for CookieItem with output(self, logger) -> Unit {
+  logger.write_string(sanitize_cookie_value(self.name))
+  logger.write_char('=')
+  logger.write_string(sanitize_cookie_value(self.value))
+  if self.max_age is Some(max_age) {
+    logger.write_string("; Max-Age=")
+    logger.write_string(max_age.to_string())
+  }
+  if self.path is Some(path) {
+    logger.write_string("; Path=")
+    logger.write_string(path)
+  }
+  if self.domain is Some(domain) {
+    logger.write_string("; Domain=")
+    logger.write_string(domain)
+  }
+  if self.secure == Some(true) {
+    logger.write_string("; Secure")
+  }
+  if self.http_only == Some(true) {
+    logger.write_string("; HttpOnly")
+  }
+  if self.same_site is Some(same_site) {
+    logger.write_string("; SameSite=")
+    logger.write_string(same_site.to_string())
+  }
+}
+
+///|
+pub impl Show for CookieItem with to_string(self : CookieItem) -> String {
+  let buf = @buffer.new()
+  self.output(buf)
+  buf.to_string()
 }
 
 ///|
