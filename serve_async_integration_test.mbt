@@ -32,12 +32,9 @@ async fn allocate_test_server() -> @http.Server {
 ///|
 impl ServeStaticProvider for TestStaticProvider with get_meta(_, id) {
   match id {
-    "" =>
-      Some(StaticAssetMeta::new(asset_type="text/html; charset=utf-8", size=5L))
+    "" => Some(StaticAssetMeta(asset_type="text/html; charset=utf-8", size=5L))
     "hello.txt" =>
-      Some(
-        StaticAssetMeta::new(asset_type="text/plain; charset=utf-8", size=2L),
-      )
+      Some(StaticAssetMeta(asset_type="text/plain; charset=utf-8", size=2L))
     _ => None
   }
 }
@@ -47,7 +44,7 @@ impl ServeStaticProvider for TestStaticProvider with get_contents(_, id) {
   match id {
     "" => html("index")
     "hello.txt" => text("hi")
-    _ => HttpResponse::new(status_code=NotFound).body("Not Found")
+    _ => @crescent.HttpResponse(status_code=NotFound).body("Not Found")
   }
 }
 
@@ -81,7 +78,7 @@ impl ServeStaticProvider for EncodedStaticProvider with get_meta(_, id) {
   match id {
     "hello.txt.gz" =>
       Some(
-        StaticAssetMeta::new(
+        StaticAssetMeta(
           asset_type="text/plain; charset=utf-8",
           etag="\"encoded-v1\"",
           mtime=1_709_251_199L,
@@ -96,8 +93,8 @@ impl ServeStaticProvider for EncodedStaticProvider with get_meta(_, id) {
 ///|
 impl ServeStaticProvider for EncodedStaticProvider with get_contents(_, id) {
   match id {
-    "hello.txt.gz" => HttpResponse::new(status_code=OK).body(b"encoded")
-    _ => HttpResponse::new(status_code=NotFound).body("Not Found")
+    "hello.txt.gz" => @crescent.HttpResponse(status_code=OK).body(b"encoded")
+    _ => @crescent.HttpResponse(status_code=NotFound).body("Not Found")
   }
 }
 
@@ -511,7 +508,7 @@ fn raw_header_count(raw_headers : String, header_name : String) -> Int {
 
 ///|
 async test "serve strips query and reads put bodies" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/hello/:name", event => {
     let name = event.params.get("name").unwrap_or("world")
     event.res.headers.set("X-Raw-Url", event.req.url)
@@ -523,7 +520,7 @@ async test "serve strips query and reads put bodies" {
     let name = event.params.get("name").unwrap_or("")
     let payload : String = event.req.body() catch { _ => "" }
     event.res.headers.set("X-Kind", event.req.get_query("kind").unwrap_or(""))
-    HttpResponse::new(status_code=OK).body("\{name}:\{payload}")
+    @crescent.HttpResponse(status_code=OK).body("\{name}:\{payload}")
   })
   with_test_server(app, port => {
     let (response1, body1) = @http.get(
@@ -557,7 +554,7 @@ async test "serve strips query and reads put bodies" {
 ///|
 async test "serve preserves middleware onion order" {
   let log : Array[String] = []
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.use_middleware((event, next) => {
     if event.req.url != "/__mocket_ready" {
       log.push("before-1")
@@ -599,7 +596,7 @@ async test "serve keeps invalid websocket opcodes connection-local and stays hea
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -679,7 +676,7 @@ async test "serve keeps invalid websocket text payloads connection-local and sta
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -754,7 +751,7 @@ async test "serve keeps websocket protocol edge failures connection-local and st
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -855,7 +852,7 @@ async test "serve keeps websocket sequencing and control-size failures connectio
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -946,7 +943,7 @@ async test "serve keeps websocket continuation and length-format failures connec
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1037,7 +1034,7 @@ async test "serve echoes websocket close reasons and stays healthy" {
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1095,7 +1092,7 @@ async test "serve rejects invalid websocket close reasons and stays healthy" {
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1153,7 +1150,7 @@ async test "serve auto-replies to websocket ping frames without leaking control 
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1218,7 +1215,7 @@ async test "serve ignores unsolicited websocket pong frames without leaking cont
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1279,7 +1276,7 @@ async test "serve routes fragmented websocket messages while replying to in-flig
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1362,7 +1359,7 @@ async test "serve replies to multiple websocket pings in order without leaking c
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1451,7 +1448,7 @@ async test "serve replies to multiple websocket pings in order without leaking c
 
 ///|
 async test "serve_on_with enforces max_connections" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let gate = @async.Queue::new(kind=Unbounded)
   let started : Ref[Int] = Ref::new(0)
   app.get("/serial", _ => {
@@ -1464,7 +1461,7 @@ async test "serve_on_with enforces max_connections" {
     let server = allocate_test_server()
     let port = server.addr.port()
     group.spawn_bg(no_wait=true, () => {
-      app.serve_on_with(server, NativeServeOptions::new(max_connections=1))
+      app.serve_on_with(server, NativeServeOptions(max_connections=1))
     })
     wait_until_ready(port)
 
@@ -1523,12 +1520,12 @@ async test "serve_on_with enforces max_connections" {
 
 ///|
 async test "serve_on_with rejects non-positive max_connections" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let server = allocate_test_server()
   defer server.close()
   let result : Result[Unit, Error] = try? app.serve_on_with(
     server,
-    NativeServeOptions::new(max_connections=0),
+    NativeServeOptions(max_connections=0),
   )
   match result {
     Err(NativeServeError::InvalidMaxConnections(0)) => ()
@@ -1539,10 +1536,10 @@ async test "serve_on_with rejects non-positive max_connections" {
 
 ///|
 async test "serve_with rejects non-positive max_connections" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let result : Result[Unit, Error] = try? app.serve_with(
     port=0,
-    NativeServeOptions::new(max_connections=0),
+    NativeServeOptions(max_connections=0),
   )
   match result {
     Err(NativeServeError::InvalidMaxConnections(0)) => ()
@@ -1553,7 +1550,7 @@ async test "serve_with rejects non-positive max_connections" {
 
 ///|
 async test "serve_on_with enforces max_request_body_bytes for fixed-length bodies" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let handled : Ref[Int] = Ref::new(0)
   app.post("/body", event => {
     handled.val += 1
@@ -1565,10 +1562,7 @@ async test "serve_on_with enforces max_request_body_bytes for fixed-length bodie
     let server = allocate_test_server()
     let port = server.addr.port()
     group.spawn_bg(no_wait=true, () => {
-      app.serve_on_with(
-        server,
-        NativeServeOptions::new(max_request_body_bytes=4),
-      )
+      app.serve_on_with(server, NativeServeOptions(max_request_body_bytes=4))
     })
     wait_until_ready(port)
 
@@ -1607,7 +1601,7 @@ async test "serve_on_with enforces max_request_body_bytes for fixed-length bodie
 
 ///|
 async test "serve_on_with treats max_request_body_bytes=0 as empty-body only" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let handled : Ref[Int] = Ref::new(0)
   app.post("/body", event => {
     handled.val += 1
@@ -1619,10 +1613,7 @@ async test "serve_on_with treats max_request_body_bytes=0 as empty-body only" {
     let server = allocate_test_server()
     let port = server.addr.port()
     group.spawn_bg(no_wait=true, () => {
-      app.serve_on_with(
-        server,
-        NativeServeOptions::new(max_request_body_bytes=0),
-      )
+      app.serve_on_with(server, NativeServeOptions(max_request_body_bytes=0))
     })
     wait_until_ready(port)
 
@@ -1682,7 +1673,7 @@ async test "serve_on_with treats max_request_body_bytes=0 as empty-body only" {
 
 ///|
 async test "serve_on_with enforces max_request_body_bytes for chunked bodies" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let handled : Ref[Int] = Ref::new(0)
   app.post("/body", event => {
     handled.val += 1
@@ -1694,10 +1685,7 @@ async test "serve_on_with enforces max_request_body_bytes for chunked bodies" {
     let server = allocate_test_server()
     let port = server.addr.port()
     group.spawn_bg(no_wait=true, () => {
-      app.serve_on_with(
-        server,
-        NativeServeOptions::new(max_request_body_bytes=4),
-      )
+      app.serve_on_with(server, NativeServeOptions(max_request_body_bytes=4))
     })
     wait_until_ready(port)
 
@@ -1732,7 +1720,7 @@ async test "serve_on_with enforces max_request_body_bytes for chunked bodies" {
 
 ///|
 async test "serve_on_with accepts exact-limit chunked bodies across multiple reads" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let handled : Ref[Int] = Ref::new(0)
   app.post("/body", event => {
     handled.val += 1
@@ -1746,10 +1734,7 @@ async test "serve_on_with accepts exact-limit chunked bodies across multiple rea
     let server = allocate_test_server()
     let port = server.addr.port()
     group.spawn_bg(no_wait=true, () => {
-      app.serve_on_with(
-        server,
-        NativeServeOptions::new(max_request_body_bytes=2048),
-      )
+      app.serve_on_with(server, NativeServeOptions(max_request_body_bytes=2048))
     })
     wait_until_ready(port)
 
@@ -1774,12 +1759,12 @@ async test "serve_on_with accepts exact-limit chunked bodies across multiple rea
 
 ///|
 async test "serve_on_with rejects negative max_request_body_bytes" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let server = allocate_test_server()
   defer server.close()
   let result : Result[Unit, Error] = try? app.serve_on_with(
     server,
-    NativeServeOptions::new(max_request_body_bytes=-1),
+    NativeServeOptions(max_request_body_bytes=-1),
   )
   match result {
     Err(NativeServeError::InvalidMaxRequestBodyBytes(-1)) => ()
@@ -1790,14 +1775,14 @@ async test "serve_on_with rejects negative max_request_body_bytes" {
 
 ///|
 async test "serve_on_until_with rejects negative max_request_body_bytes" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let server = allocate_test_server()
   defer server.close()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve_on_until_with(
     server,
     shutdown,
-    NativeServeOptions::new(max_request_body_bytes=-1),
+    NativeServeOptions(max_request_body_bytes=-1),
   )
   match result {
     Err(NativeServeError::InvalidMaxRequestBodyBytes(-1)) => ()
@@ -1812,10 +1797,10 @@ async test "serve_on_until_with rejects negative max_request_body_bytes" {
 
 ///|
 async test "serve_with rejects negative max_request_body_bytes" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let result : Result[Unit, Error] = try? app.serve_with(
     port=0,
-    NativeServeOptions::new(max_request_body_bytes=-1),
+    NativeServeOptions(max_request_body_bytes=-1),
   )
   match result {
     Err(NativeServeError::InvalidMaxRequestBodyBytes(-1)) => ()
@@ -1826,12 +1811,12 @@ async test "serve_with rejects negative max_request_body_bytes" {
 
 ///|
 async test "serve_on_with rejects non-positive request_body_read_timeout_ms" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let server = allocate_test_server()
   defer server.close()
   let result : Result[Unit, Error] = try? app.serve_on_with(
     server,
-    NativeServeOptions::new(request_body_read_timeout_ms=0),
+    NativeServeOptions(request_body_read_timeout_ms=0),
   )
   match result {
     Err(NativeServeError::InvalidRequestBodyReadTimeoutMs(0)) => ()
@@ -1844,14 +1829,14 @@ async test "serve_on_with rejects non-positive request_body_read_timeout_ms" {
 
 ///|
 async test "serve_on_until_with rejects non-positive request_body_read_timeout_ms" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let server = allocate_test_server()
   defer server.close()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve_on_until_with(
     server,
     shutdown,
-    NativeServeOptions::new(request_body_read_timeout_ms=0),
+    NativeServeOptions(request_body_read_timeout_ms=0),
   )
   match result {
     Err(NativeServeError::InvalidRequestBodyReadTimeoutMs(0)) => ()
@@ -1868,10 +1853,10 @@ async test "serve_on_until_with rejects non-positive request_body_read_timeout_m
 
 ///|
 async test "serve_with rejects non-positive request_body_read_timeout_ms" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let result : Result[Unit, Error] = try? app.serve_with(
     port=0,
-    NativeServeOptions::new(request_body_read_timeout_ms=0),
+    NativeServeOptions(request_body_read_timeout_ms=0),
   )
   match result {
     Err(NativeServeError::InvalidRequestBodyReadTimeoutMs(0)) => ()
@@ -1884,12 +1869,12 @@ async test "serve_with rejects non-positive request_body_read_timeout_ms" {
 
 ///|
 async test "serve_until_with rejects non-positive request_body_read_timeout_ms" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve_until_with(
     port=0,
     shutdown,
-    NativeServeOptions::new(request_body_read_timeout_ms=0),
+    NativeServeOptions(request_body_read_timeout_ms=0),
   )
   match result {
     Err(NativeServeError::InvalidRequestBodyReadTimeoutMs(0)) => ()
@@ -1904,12 +1889,12 @@ async test "serve_until_with rejects non-positive request_body_read_timeout_ms" 
 
 ///|
 async test "serve_on_with rejects non-positive websocket_outgoing_queue_capacity" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let server = allocate_test_server()
   defer server.close()
   let result : Result[Unit, Error] = try? app.serve_on_with(
     server,
-    NativeServeOptions::new(websocket_outgoing_queue_capacity=0),
+    NativeServeOptions(websocket_outgoing_queue_capacity=0),
   )
   match result {
     Err(NativeServeError::InvalidWebSocketOutgoingQueueCapacity(0)) => ()
@@ -1924,14 +1909,14 @@ async test "serve_on_with rejects non-positive websocket_outgoing_queue_capacity
 
 ///|
 async test "serve_on_until_with rejects non-positive websocket_outgoing_queue_capacity" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let server = allocate_test_server()
   defer server.close()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve_on_until_with(
     server,
     shutdown,
-    NativeServeOptions::new(websocket_outgoing_queue_capacity=0),
+    NativeServeOptions(websocket_outgoing_queue_capacity=0),
   )
   match result {
     Err(NativeServeError::InvalidWebSocketOutgoingQueueCapacity(0)) => ()
@@ -1948,10 +1933,10 @@ async test "serve_on_until_with rejects non-positive websocket_outgoing_queue_ca
 
 ///|
 async test "serve_with rejects non-positive websocket_outgoing_queue_capacity" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let result : Result[Unit, Error] = try? app.serve_with(
     port=0,
-    NativeServeOptions::new(websocket_outgoing_queue_capacity=0),
+    NativeServeOptions(websocket_outgoing_queue_capacity=0),
   )
   match result {
     Err(NativeServeError::InvalidWebSocketOutgoingQueueCapacity(0)) => ()
@@ -1964,12 +1949,12 @@ async test "serve_with rejects non-positive websocket_outgoing_queue_capacity" {
 
 ///|
 async test "serve_until_with rejects non-positive websocket_outgoing_queue_capacity" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve_until_with(
     port=0,
     shutdown,
-    NativeServeOptions::new(websocket_outgoing_queue_capacity=0),
+    NativeServeOptions(websocket_outgoing_queue_capacity=0),
   )
   match result {
     Err(NativeServeError::InvalidWebSocketOutgoingQueueCapacity(0)) => ()
@@ -1986,12 +1971,12 @@ async test "serve_until_with rejects non-positive websocket_outgoing_queue_capac
 
 ///|
 async test "serve_on_with rejects non-positive websocket_read_timeout_ms" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let server = allocate_test_server()
   defer server.close()
   let result : Result[Unit, Error] = try? app.serve_on_with(
     server,
-    NativeServeOptions::new(websocket_read_timeout_ms=0),
+    NativeServeOptions(websocket_read_timeout_ms=0),
   )
   match result {
     Err(NativeServeError::InvalidWebSocketReadTimeoutMs(0)) => ()
@@ -2004,14 +1989,14 @@ async test "serve_on_with rejects non-positive websocket_read_timeout_ms" {
 
 ///|
 async test "serve_on_until_with rejects non-positive websocket_read_timeout_ms" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let server = allocate_test_server()
   defer server.close()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve_on_until_with(
     server,
     shutdown,
-    NativeServeOptions::new(websocket_read_timeout_ms=0),
+    NativeServeOptions(websocket_read_timeout_ms=0),
   )
   match result {
     Err(NativeServeError::InvalidWebSocketReadTimeoutMs(0)) => ()
@@ -2026,10 +2011,10 @@ async test "serve_on_until_with rejects non-positive websocket_read_timeout_ms" 
 
 ///|
 async test "serve_with rejects non-positive websocket_read_timeout_ms" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let result : Result[Unit, Error] = try? app.serve_with(
     port=0,
-    NativeServeOptions::new(websocket_read_timeout_ms=0),
+    NativeServeOptions(websocket_read_timeout_ms=0),
   )
   match result {
     Err(NativeServeError::InvalidWebSocketReadTimeoutMs(0)) => ()
@@ -2041,12 +2026,12 @@ async test "serve_with rejects non-positive websocket_read_timeout_ms" {
 
 ///|
 async test "serve_until_with rejects non-positive websocket_read_timeout_ms" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve_until_with(
     port=0,
     shutdown,
-    NativeServeOptions::new(websocket_read_timeout_ms=0),
+    NativeServeOptions(websocket_read_timeout_ms=0),
   )
   match result {
     Err(NativeServeError::InvalidWebSocketReadTimeoutMs(0)) => ()
@@ -2061,12 +2046,12 @@ async test "serve_until_with rejects non-positive websocket_read_timeout_ms" {
 
 ///|
 async test "serve_on_with rejects negative websocket_max_message_bytes" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let server = allocate_test_server()
   defer server.close()
   let result : Result[Unit, Error] = try? app.serve_on_with(
     server,
-    NativeServeOptions::new(websocket_max_message_bytes=-1),
+    NativeServeOptions(websocket_max_message_bytes=-1),
   )
   match result {
     Err(NativeServeError::InvalidWebSocketMaxMessageBytes(-1)) => ()
@@ -2079,14 +2064,14 @@ async test "serve_on_with rejects negative websocket_max_message_bytes" {
 
 ///|
 async test "serve_on_until_with rejects negative websocket_max_message_bytes" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let server = allocate_test_server()
   defer server.close()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve_on_until_with(
     server,
     shutdown,
-    NativeServeOptions::new(websocket_max_message_bytes=-1),
+    NativeServeOptions(websocket_max_message_bytes=-1),
   )
   match result {
     Err(NativeServeError::InvalidWebSocketMaxMessageBytes(-1)) => ()
@@ -2103,10 +2088,10 @@ async test "serve_on_until_with rejects negative websocket_max_message_bytes" {
 
 ///|
 async test "serve_with rejects negative websocket_max_message_bytes" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let result : Result[Unit, Error] = try? app.serve_with(
     port=0,
-    NativeServeOptions::new(websocket_max_message_bytes=-1),
+    NativeServeOptions(websocket_max_message_bytes=-1),
   )
   match result {
     Err(NativeServeError::InvalidWebSocketMaxMessageBytes(-1)) => ()
@@ -2119,12 +2104,12 @@ async test "serve_with rejects negative websocket_max_message_bytes" {
 
 ///|
 async test "serve_until_with rejects negative websocket_max_message_bytes" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve_until_with(
     port=0,
     shutdown,
-    NativeServeOptions::new(websocket_max_message_bytes=-1),
+    NativeServeOptions(websocket_max_message_bytes=-1),
   )
   match result {
     Err(NativeServeError::InvalidWebSocketMaxMessageBytes(-1)) => ()
@@ -2139,7 +2124,7 @@ async test "serve_until_with rejects negative websocket_max_message_bytes" {
 
 ///|
 async test "serve_on_with times out slow request bodies" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let handled : Ref[Int] = Ref::new(0)
   app.post("/body", event => {
     handled.val += 1
@@ -2153,7 +2138,7 @@ async test "serve_on_with times out slow request bodies" {
     group.spawn_bg(no_wait=true, () => {
       app.serve_on_with(
         server,
-        NativeServeOptions::new(request_body_read_timeout_ms=50),
+        NativeServeOptions(request_body_read_timeout_ms=50),
       )
     })
     wait_until_ready(port)
@@ -2196,12 +2181,12 @@ async test "serve_on_with times out slow request bodies" {
 
 ///|
 async test "serve_until_with rejects negative max_request_body_bytes" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve_until_with(
     port=0,
     shutdown,
-    NativeServeOptions::new(max_request_body_bytes=-1),
+    NativeServeOptions(max_request_body_bytes=-1),
   )
   match result {
     Err(NativeServeError::InvalidMaxRequestBodyBytes(-1)) => ()
@@ -2214,7 +2199,7 @@ async test "serve_until_with rejects negative max_request_body_bytes" {
 
 ///|
 async test "serve_on_with preserves head content-length for oversized requests" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/healthy", _ => "ok")
   app.get("/body", _ => "body")
   app.get("/__mocket_ready", _ => "ready")
@@ -2222,10 +2207,7 @@ async test "serve_on_with preserves head content-length for oversized requests" 
     let server = allocate_test_server()
     let port = server.addr.port()
     group.spawn_bg(no_wait=true, () => {
-      app.serve_on_with(
-        server,
-        NativeServeOptions::new(max_request_body_bytes=4),
-      )
+      app.serve_on_with(server, NativeServeOptions(max_request_body_bytes=4))
     })
     wait_until_ready(port)
 
@@ -2263,7 +2245,7 @@ async test "serve_on_with preserves head content-length for oversized requests" 
 ///|
 async test "serve matches middleware base paths by segment boundary" {
   let log : Array[String] = []
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.use_middleware(
     (event, next) => {
       log.push(event.req.path())
@@ -2309,7 +2291,7 @@ async test "serve matches middleware base paths by segment boundary" {
 
 ///|
 async test "serve_on_until stops on shutdown signal" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/__mocket_ready", _ => "ready")
   @async.with_task_group(group => {
     let server = allocate_test_server()
@@ -2348,8 +2330,8 @@ async test "serve_on_until stops on shutdown signal" {
 
 ///|
 async test "serve_on_until broadcasts shutdown when the queue is closed" {
-  let app1 = Mocket::new()
-  let app2 = Mocket::new()
+  let app1 = @crescent.Mocket()
+  let app2 = @crescent.Mocket()
   app1.get("/__mocket_ready", _ => "ready")
   app2.get("/__mocket_ready", _ => "ready")
   @async.with_task_group(group => {
@@ -2403,7 +2385,7 @@ async test "serve_on_until broadcasts shutdown when the queue is closed" {
 
 ///|
 async test "serve_until binds by port and stops on shutdown signal" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/__mocket_ready", _ => "ready")
   let start_offset = @async.now().to_int() % 20_000
   for attempt = 0; attempt < 2_048; attempt = attempt + 1 {
@@ -2463,7 +2445,7 @@ async test "serve_until binds by port and stops on shutdown signal" {
 
 ///|
 async test "serve mounts static assets by prefix" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.static_assets("/assets", TestStaticProvider::{  })
   with_test_server(app, port => {
     let (response1, body1) = @http.get(localhost_url(port, "/assets/hello.txt"))
@@ -2505,7 +2487,7 @@ async test "serve mounts static assets by prefix" {
 
 ///|
 async test "serve serves static assets from the root mount" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.static_assets("", TestStaticProvider::{  })
   @async.with_task_group(group => {
     let server = allocate_test_server()
@@ -2539,7 +2521,7 @@ async test "serve serves static assets from the root mount" {
 
 ///|
 async test "serve normalizes trailing-slash static mounts" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.static_assets("/assets/", TestStaticProvider::{  })
   with_test_server(app, port => {
     let (index_response, index_body) = @http.get(localhost_url(port, "/assets"))
@@ -2571,7 +2553,7 @@ async test "serve normalizes trailing-slash static mounts" {
 
 ///|
 async test "serve preserves content-encoding for encoded static assets" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.static_assets("/assets", EncodedStaticProvider::{  })
   with_test_server(app, port => {
     let (get_response, get_body) = issue_request(
@@ -2606,7 +2588,7 @@ async test "serve preserves content-encoding for encoded static assets" {
 
 ///|
 async test "serve preserves vary and last-modified on conditional static responses" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.static_assets("/assets", EncodedStaticProvider::{  })
   with_test_server(app, port => {
     let (get_response, get_body) = issue_request(
@@ -2672,7 +2654,7 @@ async test "serve preserves vary and last-modified on conditional static respons
 
 ///|
 async test "serve writes cookie headers" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/cookie", event => {
     event.res.set_cookie("session", "abc", path="/", http_only=true)
     "ok"
@@ -2693,14 +2675,14 @@ async test "serve writes cookie headers" {
 
 ///|
 async test "serve preserves explicit content-type headers without duplicates" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/custom", event => {
     event.res.headers.set("content-type", "application/custom")
     "ok"
   })
   app.get("/override", event => {
     event.res.headers.set("content-type", "text/plain; charset=latin1")
-    HttpResponse::new(status_code=OK, headers={
+    @crescent.HttpResponse(status_code=OK, headers={
       "Content-Type": "application/json",
     }).body("{}")
   })
@@ -2732,22 +2714,22 @@ async test "serve preserves explicit content-type headers without duplicates" {
 
 ///|
 async test "serve handles head fallback, method not allowed, and options" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/resource", event => {
     event.res.headers.set("X-Reply", "get")
     "payload"
   })
   app.get("/empty", _ => "")
   app.post("/resource", _ => {
-    HttpResponse::new(status_code=Created).body("created")
+    @crescent.HttpResponse(status_code=Created).body("created")
   })
   app.head("/override", event => {
     event.res.headers.set("X-Reply", "head")
-    HttpResponse::new(status_code=OK).body("override")
+    @crescent.HttpResponse(status_code=OK).body("override")
   })
   app.get("/override", event => {
     event.res.headers.set("X-Reply", "get")
-    HttpResponse::new(status_code=OK).body("get-body")
+    @crescent.HttpResponse(status_code=OK).body("get-body")
   })
   with_test_server(app, port => {
     let (head_response, head_body) = issue_request(port, Head, "/resource")
@@ -2827,9 +2809,11 @@ async test "serve handles head fallback, method not allowed, and options" {
 
 ///|
 async test "serve binds by port and dispatches trace and connect routes" {
-  let app = Mocket::new()
-  app.trace("/trace", _ => HttpResponse::new(status_code=OK).body("trace"))
-  app.connect("/connect", _ => HttpResponse::new(status_code=OK).body("connect"))
+  let app = @crescent.Mocket()
+  app.trace("/trace", _ => @crescent.HttpResponse(status_code=OK).body("trace"))
+  app.connect("/connect", _ => {
+    @crescent.HttpResponse(status_code=OK).body("connect")
+  })
   with_port_bound_test_server(app, port => {
     let (trace_response, trace_body) = issue_request(port, Trace, "/trace")
     assert_eq(trace_response.code, 200)
@@ -2850,7 +2834,7 @@ async test "serve binds by port and dispatches trace and connect routes" {
 
 ///|
 async test "serve does not overmatch non-terminal double wildcards" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/files/**/meta", _ => "meta")
   app.post("/files/**/upload", _ => "upload")
   with_test_server(app, port => {
@@ -2919,7 +2903,7 @@ async test "serve does not overmatch non-terminal double wildcards" {
 ///|
 async test "serve handles websocket text and binary messages" {
   let log : Array[String] = []
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => log.push("open")
@@ -2959,7 +2943,7 @@ async test "serve handles websocket text and binary messages" {
 
 ///|
 async test "serve drops oldest buffered websocket messages on overflow when configured" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(peer) => {
@@ -2972,7 +2956,7 @@ async test "serve drops oldest buffered websocket messages on overflow when conf
   })
   with_test_server_options(
     app,
-    NativeServeOptions::new(
+    NativeServeOptions(
       websocket_outgoing_queue_capacity=2,
       websocket_overflow_policy=DropOldest,
     ),
@@ -2997,7 +2981,7 @@ async test "serve drops oldest buffered websocket messages on overflow when conf
 
 ///|
 async test "serve drops oldest buffered websocket messages by default" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(peer) => {
@@ -3010,7 +2994,7 @@ async test "serve drops oldest buffered websocket messages by default" {
   })
   with_test_server_options(
     app,
-    NativeServeOptions::new(websocket_outgoing_queue_capacity=2),
+    NativeServeOptions(websocket_outgoing_queue_capacity=2),
     port => {
       let client = @websocket.connect("ws://127.0.0.1:\{port}/ws")
       defer client.close()
@@ -3032,7 +3016,7 @@ async test "serve drops oldest buffered websocket messages by default" {
 
 ///|
 async test "serve drops latest buffered websocket messages on overflow when configured" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(peer) => {
@@ -3045,7 +3029,7 @@ async test "serve drops latest buffered websocket messages on overflow when conf
   })
   with_test_server_options(
     app,
-    NativeServeOptions::new(
+    NativeServeOptions(
       websocket_outgoing_queue_capacity=2,
       websocket_overflow_policy=DropLatest,
     ),
@@ -3071,7 +3055,7 @@ async test "serve drops latest buffered websocket messages on overflow when conf
 ///|
 async test "serve closes websocket clients after read timeout between messages" {
   let log : Array[String] = []
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/healthy", _ => "ok")
   app.ws("/ws", event => {
     match event {
@@ -3083,7 +3067,7 @@ async test "serve closes websocket clients after read timeout between messages" 
   })
   with_test_server_options(
     app,
-    NativeServeOptions::new(websocket_read_timeout_ms=50),
+    NativeServeOptions(websocket_read_timeout_ms=50),
     port => {
       let client = @websocket.connect("ws://127.0.0.1:\{port}/ws")
       defer client.close()
@@ -3127,7 +3111,7 @@ async test "serve closes websocket clients after read timeout between messages" 
 ///|
 async test "serve closes oversized websocket text messages and stays healthy" {
   let log : Array[String] = []
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/healthy", _ => "ok")
   app.ws("/ws", event => {
     match event {
@@ -3142,7 +3126,7 @@ async test "serve closes oversized websocket text messages and stays healthy" {
   })
   with_test_server_options(
     app,
-    NativeServeOptions::new(websocket_max_message_bytes=4),
+    NativeServeOptions(websocket_max_message_bytes=4),
     port => {
       let oversized_client = @websocket.connect("ws://127.0.0.1:\{port}/ws")
       defer oversized_client.close()
@@ -3196,7 +3180,7 @@ async test "serve closes oversized websocket text messages and stays healthy" {
 ///|
 async test "serve closes oversized websocket binary messages" {
   let log : Array[String] = []
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => log.push("open")
@@ -3210,7 +3194,7 @@ async test "serve closes oversized websocket binary messages" {
   })
   with_test_server_options(
     app,
-    NativeServeOptions::new(websocket_max_message_bytes=4),
+    NativeServeOptions(websocket_max_message_bytes=4),
     port => {
       let client = @websocket.connect("ws://127.0.0.1:\{port}/ws")
       defer client.close()
@@ -3253,7 +3237,7 @@ async test "serve closes oversized websocket binary messages" {
 ///|
 async test "serve treats websocket_max_message_bytes=0 as empty-message only" {
   let log : Array[String] = []
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/healthy", _ => "ok")
   app.ws("/ws", event => {
     match event {
@@ -3271,7 +3255,7 @@ async test "serve treats websocket_max_message_bytes=0 as empty-message only" {
   })
   with_test_server_options(
     app,
-    NativeServeOptions::new(websocket_max_message_bytes=0),
+    NativeServeOptions(websocket_max_message_bytes=0),
     port => {
       let empty_client = @websocket.connect("ws://127.0.0.1:\{port}/ws")
       defer empty_client.close()
@@ -3368,7 +3352,7 @@ async test "serve treats websocket_max_message_bytes=0 as empty-message only" {
 ///|
 async test "serve enforces websocket_max_message_bytes across multiple reads" {
   let log : Array[String] = []
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => log.push("open")
@@ -3382,7 +3366,7 @@ async test "serve enforces websocket_max_message_bytes across multiple reads" {
   })
   with_test_server_options(
     app,
-    NativeServeOptions::new(websocket_max_message_bytes=1536),
+    NativeServeOptions(websocket_max_message_bytes=1536),
     port => {
       let oversized_client = @websocket.connect("ws://127.0.0.1:\{port}/ws")
       defer oversized_client.close()
@@ -3430,7 +3414,7 @@ async test "serve enforces websocket_max_message_bytes across multiple reads" {
 ///|
 async test "serve rejects websocket upgrades for http-only routes" {
   let handled : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/ws", _ => {
     handled.val += 1
     "http route"
@@ -3490,7 +3474,7 @@ async test "serve rejects websocket upgrades for http-only routes" {
 ///|
 async test "serve accepts padded websocket handshake headers on matched routes" {
   let log : Array[String] = []
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/ws", event => {
     match event {
       Open(_) => log.push("open")
@@ -3518,7 +3502,7 @@ async test "serve accepts padded websocket handshake headers on matched routes" 
 async test "serve rejects invalid websocket handshakes on matched routes and stays healthy" {
   let opened : Ref[Int] = Ref::new(0)
   let closed : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/healthy", _ => "ok")
   app.ws("/ws", event => {
     match event {
@@ -3562,7 +3546,7 @@ async test "serve rejects invalid websocket handshakes on matched routes and sta
 async test "serve rejects unsupported websocket versions and non-get upgrades" {
   let opened : Ref[Int] = Ref::new(0)
   let closed : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/healthy", _ => "ok")
   app.ws("/ws", event => {
     match event {
@@ -3614,7 +3598,7 @@ async test "serve rejects unsupported websocket versions and non-get upgrades" {
 async test "serve closes the connection after rejected websocket upgrades" {
   let opened : Ref[Int] = Ref::new(0)
   let closed : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/healthy", _ => "ok")
   app.ws("/ws", event => {
     match event {
@@ -3670,7 +3654,7 @@ async test "serve rejects malformed websocket-like requests on websocket routes 
   let http_hits : Ref[Int] = Ref::new(0)
   let ws_opened : Ref[Int] = Ref::new(0)
   let ws_closed : Ref[Int] = Ref::new(0)
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/ws", _ => {
     http_hits.val += 1
     "http route"
@@ -3753,7 +3737,7 @@ async test "serve rejects malformed websocket-like requests on websocket routes 
 ///|
 async test "serve honors mixed-case static and websocket upgrade headers" {
   let log : Array[String] = []
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.static_assets("/assets", EncodedStaticProvider::{  })
   app.ws("/ws", event => {
     match event {
@@ -3810,7 +3794,7 @@ async test "serve honors mixed-case static and websocket upgrade headers" {
 
 ///|
 async test "serve matches grouped and dynamic websocket routes" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.group("/api", group => {
     group.ws("/room/:name", event => {
       match event {
@@ -3836,7 +3820,7 @@ async test "serve matches grouped and dynamic websocket routes" {
 
 ///|
 async test "serve keeps websocket subscriptions across events" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -3873,7 +3857,7 @@ async test "serve keeps websocket subscriptions across events" {
 
 ///|
 async test "serve lets close handlers publish to remaining websocket subscribers" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -3909,8 +3893,8 @@ async test "serve lets close handlers publish to remaining websocket subscribers
 
 ///|
 async test "serve isolates websocket channels per app" {
-  let app1 = Mocket::new()
-  let app2 = Mocket::new()
+  let app1 = @crescent.Mocket()
+  let app2 = @crescent.Mocket()
   app1.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -3955,7 +3939,7 @@ async test "serve isolates websocket channels per app" {
 
 ///|
 async test "serve isolates websocket channels per server invocation when reusing one app" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -3993,7 +3977,7 @@ async test "serve isolates websocket channels per server invocation when reusing
 
 ///|
 async test "serve isolates close-handler websocket fanout per reused app server" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -4045,7 +4029,7 @@ async test "serve isolates close-handler websocket fanout per reused app server"
 
 ///|
 async test "serve keeps other reused-app servers alive when one server is cancelled" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/__mocket_ready", _ => "ready")
   app.ws("/hub", event => {
     match event {
@@ -4111,7 +4095,7 @@ async test "serve keeps other reused-app servers alive when one server is cancel
 
 ///|
 async test "serve_on_until sends going-away close to websocket clients on shutdown signal" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/__mocket_ready", _ => "ready")
   app.ws("/ws", event => {
     match event {
@@ -4170,7 +4154,7 @@ async test "serve_on_until sends going-away close to websocket clients on shutdo
 
 ///|
 async test "serve_on_until broadcasts going-away close when the shutdown queue is closed" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/__mocket_ready", _ => "ready")
   app.ws("/ws", event => {
     match event {
@@ -4274,7 +4258,7 @@ async test "serve_on_until broadcasts going-away close when the shutdown queue i
 
 ///|
 async test "serve_on_until queue close stops remaining reused websocket servers after cancellation" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/__mocket_ready", _ => "ready")
   app.ws("/hub", event => {
     match event {
@@ -4380,7 +4364,7 @@ async test "serve_on_until queue close stops remaining reused websocket servers 
 
 ///|
 async test "serve_on_until shutdown signal wakes one reused websocket server" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/__mocket_ready", _ => "ready")
   app.ws("/hub", event => {
     match event {
@@ -4619,7 +4603,7 @@ async test "serve_on_until shutdown signal wakes one reused websocket server" {
 
 ///|
 async test "serve_on_until queue close stops surviving reused websocket server after shutdown signal" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/__mocket_ready", _ => "ready")
   app.ws("/hub", event => {
     match event {
@@ -4834,7 +4818,7 @@ async test "serve_on_until queue close stops surviving reused websocket server a
 
 ///|
 async test "serve_on_until queue close broadcasts to remaining reused websocket servers after shutdown signal" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.get("/__mocket_ready", _ => "ready")
   app.ws("/hub", event => {
     match event {

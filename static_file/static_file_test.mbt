@@ -74,7 +74,7 @@ async fn try_remove(path : String) -> Unit noraise {
 
 ///|
 test "get_type returns correct MIME types for common extensions" {
-  let provider = StaticFileProvider::new(path=".")
+  let provider = @static_file.StaticFileProvider(path=".")
   // Text types
   assert_eq(provider.get_type("html"), Some("text/html; charset=utf-8"))
   assert_eq(provider.get_type("htm"), Some("text/html; charset=utf-8"))
@@ -113,7 +113,7 @@ async test "static_file blocks symlink escaping root" {
     link_path,
   )
   guard link_created is Ok(_) else { return }
-  let provider = StaticFileProvider::new(path="static_file/testdata")
+  let provider = @static_file.StaticFileProvider(path="static_file/testdata")
   // The symlink exists inside the root directory but points outside;
   // the provider must refuse to serve it.
   let meta = provider.get_meta("escape_link")
@@ -124,7 +124,7 @@ async test "static_file blocks symlink escaping root" {
 
 ///|
 async test "static_file provider exposes file metadata" {
-  let provider = StaticFileProvider::new(path="static_file/testdata")
+  let provider = @static_file.StaticFileProvider(path="static_file/testdata")
   match provider.get_meta("hello.txt") {
     Some(meta) => {
       assert_eq(meta.size, Some(16L))
@@ -147,7 +147,7 @@ async test "static_file serves files and directory index" {
   let app = @crescent.Mocket()
   app.static_assets(
     "/assets",
-    StaticFileProvider::new(path="static_file/testdata"),
+    @static_file.StaticFileProvider(path="static_file/testdata"),
   )
   with_test_server(app, port => {
     let (file_response, file_body) = @http.get(
@@ -176,7 +176,7 @@ async test "static_file serves head and validates etags" {
   let app = @crescent.Mocket()
   app.static_assets(
     "/assets",
-    StaticFileProvider::new(path="static_file/testdata"),
+    @static_file.StaticFileProvider(path="static_file/testdata"),
   )
   with_test_server(app, port => {
     let (get_response, get_body) = @http.get(
@@ -286,7 +286,7 @@ async test "static_file respects grouped mounts and blocks traversal" {
   app.group("/api", group => {
     group.static_assets(
       "/assets",
-      StaticFileProvider::new(path="static_file/testdata"),
+      @static_file.StaticFileProvider(path="static_file/testdata"),
     )
   })
   with_test_server(app, port => {

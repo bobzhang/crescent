@@ -50,7 +50,7 @@ pub(all) struct CookieItem {
 
 ///|
 /// Creates a new `CookieItem` with the given name, value, and optional attributes.
-pub fn CookieItem::new(
+fn CookieItem::new(
   name~ : String,
   value~ : String,
   max_age? : Int,

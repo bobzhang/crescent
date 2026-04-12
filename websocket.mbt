@@ -15,7 +15,7 @@ pub struct WebSocketPeer {
 ///|
 /// Creates a new `WebSocketPeer` with the given connection ID and optional
 /// route parameters (extracted from dynamic WebSocket routes like `/ws/:room`).
-pub fn WebSocketPeer::new(
+fn WebSocketPeer::new(
   connection_id~ : String,
   params? : Map[String, String],
 ) -> WebSocketPeer {

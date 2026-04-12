@@ -15,7 +15,7 @@ pub struct StaticFileProvider {
 
 ///|
 /// Creates a new `StaticFileProvider` rooted at the given directory path.
-pub fn StaticFileProvider::new(path~ : String) -> StaticFileProvider {
+fn StaticFileProvider::new(path~ : String) -> StaticFileProvider {
   { path, }
 }
 

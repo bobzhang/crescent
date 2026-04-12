@@ -20,7 +20,7 @@ pub(all) struct HttpRequest {
 
 ///|
 /// Creates a new `HttpRequest` with the given method, URL, headers, and optional body.
-pub fn HttpRequest::new(
+fn HttpRequest::new(
   http_method : HttpMethod,
   url : String,
   headers : Map[String, String],

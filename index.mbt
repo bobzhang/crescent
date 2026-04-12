@@ -32,7 +32,7 @@ fn next_mocket_instance_id() -> String {
 
 ///|
 /// Creates a new Mocket application instance with an optional base path prefix.
-pub fn Mocket::new(base_path? : String = "") -> Mocket {
+fn Mocket::new(base_path? : String = "") -> Mocket {
   {
     base_path,
     route_keys: [],
