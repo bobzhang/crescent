@@ -1,9 +1,13 @@
 ///|
 /// An outgoing HTTP response containing the status code, headers, cookies, and body.
 pub(all) struct HttpResponse {
+  /// The HTTP status code (e.g., `OK`, `NotFound`, `InternalServerError`).
   mut status_code : StatusCode
+  /// Response headers as key-value pairs.
   headers : Map[String, String]
+  /// Cookies to send via `Set-Cookie` headers.
   cookies : Map[String, @cookie.CookieItem]
+  /// The raw response body bytes.
   mut raw_body : Bytes
 
   fn new(

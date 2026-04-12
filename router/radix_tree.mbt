@@ -204,14 +204,15 @@ fn[T] search_segments(
   None
 }
 
-/// A per-method radix tree router that provides O(path_length) route lookup.
-
 ///|
-struct RadixRouter[T] {
-  // Per-method trees
-  trees : Map[String, RadixNode[T]]
-  // Fallback for routes registered with CompiledRoute (globstar with trailing segments)
-  fallback_routes : Map[String, Array[(CompiledRoute, T)]]
+/// A per-method radix tree router that provides O(path_length) route lookup.
+pub struct RadixRouter[T] {
+  /// Per-method radix trees: `Map[method, root_node]`.
+  priv trees : Map[String, RadixNode[T]]
+  /// Fallback list for patterns the radix tree cannot represent (e.g., `/**/meta`).
+  priv fallback_routes : Map[String, Array[(CompiledRoute, T)]]
+
+  fn[T] new() -> RadixRouter[T]
 }
 
 ///|

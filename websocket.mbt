@@ -2,8 +2,11 @@
 /// Represents a connected WebSocket client with its connection ID, subscribed
 /// channels, and route parameters captured from the upgrade URL.
 pub struct WebSocketPeer {
+  /// Unique identifier for this connection within the WebSocket hub.
   priv connection_id : String
+  /// Pub/sub channels this peer is currently subscribed to.
   priv subscribed_channels : Array[String]
+  /// Route parameters captured from the WebSocket upgrade URL (e.g., `/ws/:room`).
   priv params : Map[String, String]
 
   fn new(

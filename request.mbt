@@ -1,12 +1,17 @@
 ///|
 /// An incoming HTTP request containing the method, URL, headers, and body.
 pub(all) struct HttpRequest {
+  /// The HTTP method (Get, Post, Put, etc.).
   http_method : HttpMethod
+  /// The raw request-target string (path + query + fragment).
   url : String
+  /// Request headers as key-value pairs.
   headers : Map[String, String]
+  /// The raw request body bytes.
   mut raw_body : Bytes
-  // Lazily cached parsed path and query params to avoid re-parsing per request
+  /// Lazily cached parsed path, populated on first call to `path()`.
   priv mut cached_path : String?
+  /// Lazily cached parsed query params, populated on first call to `get_query()` or `query_params()`.
   priv mut cached_query_params : Map[String, String]?
 
   /// Constructor — creates a new HttpRequest.

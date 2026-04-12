@@ -28,8 +28,11 @@ impl Show for Host with output(self, logger) {
 /// The authority component of a URI, comprising an optional userinfo, a host,
 /// and an optional port number (e.g. `user:pass@example.com:8080`).
 pub struct Authority {
+  /// Userinfo component before `@` (e.g., `user:pass`), if present.
   mut userinfo : BytesView?
+  /// Host component: either a domain name (`RegName`) or IPv6 address.
   mut host : Host
+  /// Port number, if explicitly specified in the URI.
   mut port : Int?
 } derive(Eq, Debug)
 
@@ -48,10 +51,15 @@ impl Show for Authority with output(self, logger) {
 /// A parsed URI following RFC 3986, containing an optional scheme, authority,
 /// path segments, query, and fragment.
 pub struct Uri {
+  /// URI scheme (e.g., `http`, `https`, `ftp`), if present.
   mut scheme : BytesView?
+  /// Authority component (`userinfo@host:port`), if present.
   mut authority : Authority?
+  /// Path segments split by `/`. A leading `/` produces an empty first segment.
   path : Array[BytesView]
+  /// Query string after `?`, if present (without the `?`).
   mut query : BytesView?
+  /// Fragment after `#`, if present (without the `#`).
   mut fragment : BytesView?
 } derive(Eq, Debug)
 

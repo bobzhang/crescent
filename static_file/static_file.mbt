@@ -8,6 +8,7 @@ using @crescent {trait ServeStaticProvider, trait Responder}
 /// `ServeStaticProvider` trait to resolve asset metadata and contents from a
 /// directory on disk.
 pub struct StaticFileProvider {
+  /// Root directory path on disk from which files are served.
   priv path : String
 
   fn new(path~ : String) -> StaticFileProvider

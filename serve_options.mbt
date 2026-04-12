@@ -29,14 +29,23 @@ pub impl Show for NativeWebSocketOverflowPolicy with output(self, logger) {
 ///|
 /// Configuration options for the native async HTTP server runtime.
 pub struct NativeServeOptions {
+  /// Maximum concurrent TCP connections; `None` means unlimited.
   max_connections : Int?
+  /// Maximum request body size in bytes; exceeding yields `413 Request Entity Too Large`.
   max_request_body_bytes : Int?
+  /// Timeout for reading the request body in milliseconds; exceeding yields `408 Request Timeout`.
   request_body_read_timeout_ms : Int?
+  /// Timeout for the handler + middleware pipeline in milliseconds; exceeding yields `504 Gateway Timeout`.
   handler_timeout_ms : Int?
+  /// Graceful shutdown drain period in milliseconds; `None` means immediate cancellation.
   shutdown_timeout_ms : Int?
+  /// Maximum buffered outbound WebSocket messages per connection (default: 256).
   websocket_outgoing_queue_capacity : Int?
+  /// Policy when the outbound WebSocket queue is full (`DropOldest` or `DropLatest`).
   websocket_overflow_policy : NativeWebSocketOverflowPolicy?
+  /// Timeout for the next inbound WebSocket message in milliseconds; exceeding closes the connection.
   websocket_read_timeout_ms : Int?
+  /// Maximum inbound WebSocket message size in bytes; exceeding closes with `1009 Message Too Big`.
   websocket_max_message_bytes : Int?
 
   fn new(

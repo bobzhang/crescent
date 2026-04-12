@@ -6,16 +6,24 @@
 /// - `dynamic_routes` — radix tree for O(path_length) dynamic lookup
 /// - `route_keys` — flat list of `(method, path)` for introspection via `routes()`
 pub struct Mocket {
+  /// Path prefix prepended to all routes in this app/group.
   priv base_path : String
+  /// Flat list of `(method, path)` for introspection via `routes()`.
   priv route_keys : Array[(String, String)]
+  /// Ordered middleware list; each entry is `(base_path_scope, middleware)`.
   priv middlewares : Array[(String, Middleware)]
+  /// O(1) lookup for fixed paths: `Map[method, Map[path, handler]]`.
   priv static_routes : Map[String, Map[String, HttpHandler]]
+  /// O(path_length) lookup for parameterized paths (`:param`, `*`, `**`).
   priv dynamic_routes : @router.RadixRouter[HttpHandler]
+  /// O(1) lookup for fixed WebSocket paths.
   priv ws_static_routes : Map[String, WebSocketHandler]
-  // WebSocket dynamic routes share the radix tree for consistent precedence
-  // with HTTP routes. "WS" is used as a synthetic method key.
+  /// O(path_length) lookup for parameterized WebSocket paths.
+  /// Uses `"WS"` as a synthetic method key for consistent precedence with HTTP routes.
   priv ws_dynamic_routes : @router.RadixRouter[WebSocketHandler]
+  /// Unique ID scoping the native WebSocket hub for this app instance.
   priv ws_runtime_id : String
+  /// Custom handler for URLs that match no registered route.
   priv mut not_found_handler : HttpHandler?
 
   fn new(base_path? : String) -> Mocket
@@ -38,7 +46,7 @@ fn Mocket::new(base_path? : String = "") -> Mocket {
     route_keys: [],
     middlewares: [],
     static_routes: {},
-    dynamic_routes: @router.RadixRouter::new(),
+    dynamic_routes: RadixRouter(),
     ws_static_routes: {},
     ws_dynamic_routes: @router.RadixRouter::new(),
     ws_runtime_id: next_mocket_instance_id(),
