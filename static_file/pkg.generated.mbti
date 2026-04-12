@@ -15,7 +15,6 @@ pub struct StaticFileProvider {
 
   fn new(path~ : String) -> StaticFileProvider
 }
-pub fn StaticFileProvider::new(path~ : String) -> Self
 pub impl @crescent.ServeStaticProvider for StaticFileProvider
 
 // Type aliases

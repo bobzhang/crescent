@@ -23,7 +23,7 @@ pub struct ResourceConfig {
 
 ///|
 /// Creates a new `ResourceConfig` with optional CRUD handlers.
-pub fn ResourceConfig::new(
+fn ResourceConfig::new(
   list? : async (MocketEvent) -> &Responder,
   get? : async (MocketEvent) -> &Responder,
   create? : async (MocketEvent) -> &Responder,

@@ -66,7 +66,7 @@ pub struct NativeServeOptions {
 /// websocket queue drops the oldest or latest message.
 /// `websocket_read_timeout_ms`, if present, closes websocket connections
 /// after that many milliseconds waiting for the next inbound message.
-pub fn NativeServeOptions::new(
+fn NativeServeOptions::new(
   max_connections? : Int,
   max_request_body_bytes? : Int,
   request_body_read_timeout_ms? : Int,

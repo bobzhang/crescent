@@ -15,10 +15,7 @@ for non-filesystem sources (embedded assets, S3, in-memory caches).
 ///|
 async fn main {
   let app = @crescent.Mocket()
-  app.static_assets(
-    "/assets",
-    @static_file.StaticFileProvider::new(path="./public"),
-  )
+  app.static_assets("/assets", @static_file.StaticFileProvider(path="./public"))
   app.serve(port=4000)
 }
 ```
@@ -85,7 +82,7 @@ content correctly.
 ```mbt check
 ///|
 test "get_type returns common MIME types" {
-  let provider = @static_file.StaticFileProvider::new(path=".")
+  let provider = @static_file.StaticFileProvider(path=".")
   // text
   assert_eq(provider.get_type("html"), Some("text/html; charset=utf-8"))
   assert_eq(provider.get_type("css"), Some("text/css; charset=utf-8"))
@@ -113,7 +110,7 @@ successfully rather than 500'ing:
 ```mbt check
 ///|
 test "get_type returns None for unknown extensions" {
-  let provider = @static_file.StaticFileProvider::new(path=".")
+  let provider = @static_file.StaticFileProvider(path=".")
   assert_eq(provider.get_type("xyz"), None)
   assert_eq(provider.get_type(""), None)
 }
@@ -143,7 +140,7 @@ default list is tuned for the conventional project layouts:
 ```mbt check
 ///|
 test "directory index names default list" {
-  let provider = @static_file.StaticFileProvider::new(path=".")
+  let provider = @static_file.StaticFileProvider(path=".")
   let names = provider.get_index_names()
   // `index.html` is tried first — by convention the canonical entry point
   assert_eq(names[0], "index.html")
@@ -170,9 +167,7 @@ changes whenever the file is rewritten or touched:
 ```mbt check
 ///|
 async test "get_meta returns size, path, and etag for a real file" {
-  let provider = @static_file.StaticFileProvider::new(
-    path="static_file/testdata",
-  )
+  let provider = @static_file.StaticFileProvider(path="static_file/testdata")
   match provider.get_meta("hello.txt") {
     Some(meta) => {
       assert_eq(meta.size, Some(16L))
@@ -194,9 +189,7 @@ return `None`, which the framework translates into a `404`:
 ```mbt check
 ///|
 async test "get_meta returns None for missing files" {
-  let provider = @static_file.StaticFileProvider::new(
-    path="static_file/testdata",
-  )
+  let provider = @static_file.StaticFileProvider(path="static_file/testdata")
   assert_true(provider.get_meta("does_not_exist.txt") is None)
 }
 ```
@@ -250,7 +243,7 @@ single-page-app handler mounted at `/*`:
 ```mbt check
 ///|
 test "fallthrough is disabled by default" {
-  let provider = @static_file.StaticFileProvider::new(path=".")
+  let provider = @static_file.StaticFileProvider(path=".")
   assert_eq(provider.get_fallthrough(), false)
 }
 ```

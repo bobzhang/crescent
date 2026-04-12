@@ -95,7 +95,6 @@ pub fn HttpRequest::get_header(Self, String) -> String?
 pub fn HttpRequest::get_query(Self, String) -> String?
 pub fn[T : @json.FromJson] HttpRequest::json(Self) -> T raise
 pub fn HttpRequest::method_string(Self) -> String
-pub fn HttpRequest::new(HttpMethod, String, Map[String, String], raw_body? : Bytes) -> Self
 pub fn HttpRequest::path(Self) -> String
 pub fn HttpRequest::query_params(Self) -> Map[String, String]
 pub fn HttpRequest::query_string(Self) -> String?
@@ -120,7 +119,6 @@ pub fn HttpResponse::header(Self, String, String) -> Self
 pub fn HttpResponse::internal_server_error() -> Self
 pub fn HttpResponse::json(Self, &ToJson) -> Self
 pub fn[T : ToJson] HttpResponse::json_value(Self, T) -> Self
-pub fn HttpResponse::new(status_code~ : StatusCode, headers? : Map[String, String], cookies? : Map[String, @cookie.CookieItem], raw_body? : Bytes) -> Self
 pub fn HttpResponse::no_content() -> Self
 pub fn HttpResponse::not_found() -> Self
 pub fn HttpResponse::ok() -> Self
@@ -152,7 +150,6 @@ pub fn Mocket::group(Self, String, (Self) -> Unit) -> Unit
 pub fn Mocket::has_not_found_handler(Self) -> Bool
 pub fn Mocket::head(Self, String, async (MocketEvent) -> &Responder) -> Unit
 pub fn Mocket::head_raw(Self, String, async (MocketEvent) -> &Responder noraise) -> Unit
-pub fn Mocket::new(base_path? : String) -> Self
 pub fn Mocket::on(Self, String, String, async (MocketEvent) -> &Responder noraise) -> Unit
 pub fn Mocket::options(Self, String, async (MocketEvent) -> &Responder) -> Unit
 pub fn Mocket::options_raw(Self, String, async (MocketEvent) -> &Responder noraise) -> Unit
@@ -208,7 +205,6 @@ pub struct NativeServeOptions {
 
   fn new(max_connections? : Int, max_request_body_bytes? : Int, request_body_read_timeout_ms? : Int, handler_timeout_ms? : Int, shutdown_timeout_ms? : Int, websocket_outgoing_queue_capacity? : Int, websocket_overflow_policy? : NativeWebSocketOverflowPolicy, websocket_read_timeout_ms? : Int, websocket_max_message_bytes? : Int) -> NativeServeOptions
 }
-pub fn NativeServeOptions::new(max_connections? : Int, max_request_body_bytes? : Int, request_body_read_timeout_ms? : Int, handler_timeout_ms? : Int, shutdown_timeout_ms? : Int, websocket_outgoing_queue_capacity? : Int, websocket_overflow_policy? : NativeWebSocketOverflowPolicy, websocket_read_timeout_ms? : Int, websocket_max_message_bytes? : Int) -> Self
 
 pub(all) enum NativeWebSocketOverflowPolicy {
   DropOldest
@@ -225,7 +221,6 @@ pub struct ResourceConfig {
 
   fn new(list? : async (MocketEvent) -> &Responder, get? : async (MocketEvent) -> &Responder, create? : async (MocketEvent) -> &Responder, update? : async (MocketEvent) -> &Responder, delete? : async (MocketEvent) -> &Responder) -> ResourceConfig
 }
-pub fn ResourceConfig::new(list? : async (MocketEvent) -> &Responder, get? : async (MocketEvent) -> &Responder, create? : async (MocketEvent) -> &Responder, update? : async (MocketEvent) -> &Responder, delete? : async (MocketEvent) -> &Responder) -> Self
 
 pub(all) struct StaticAssetMeta {
   asset_type : String?
@@ -237,7 +232,6 @@ pub(all) struct StaticAssetMeta {
 
   fn new(asset_type? : String, etag? : String, mtime? : Int64, path? : String, size? : Int64, encoding? : String) -> StaticAssetMeta
 }
-pub fn StaticAssetMeta::new(asset_type? : String, etag? : String, mtime? : Int64, path? : String, size? : Int64, encoding? : String) -> Self
 
 type StaticResolvedResponder
 pub impl Responder for StaticResolvedResponder
@@ -318,7 +312,6 @@ pub struct TestClient {
 }
 pub async fn TestClient::delete(Self, String, headers? : Map[String, String]) -> TestResponse
 pub async fn TestClient::get(Self, String, headers? : Map[String, String]) -> TestResponse
-pub fn TestClient::new(Mocket) -> Self
 pub async fn TestClient::post(Self, String, body? : Bytes, headers? : Map[String, String]) -> TestResponse
 pub async fn TestClient::put(Self, String, body? : Bytes, headers? : Map[String, String]) -> TestResponse
 pub async fn TestClient::request(Self, String, String, headers~ : Map[String, String], body~ : Bytes) -> TestResponse
@@ -350,7 +343,6 @@ pub struct WebSocketPeer {
   fn new(connection_id~ : String, params? : Map[String, String]) -> WebSocketPeer
 }
 pub fn WebSocketPeer::binary(Self, Bytes) -> Unit
-pub fn WebSocketPeer::new(connection_id~ : String, params? : Map[String, String]) -> Self
 pub fn WebSocketPeer::param(Self, String) -> String?
 pub fn WebSocketPeer::publish(Self, String, String) -> Unit
 pub fn WebSocketPeer::subscribe(Self, String) -> Unit

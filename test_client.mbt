@@ -16,7 +16,7 @@ pub struct TestResponse {
 
 ///|
 /// Creates a new test client wrapping the given app.
-pub fn TestClient::new(app : Mocket) -> TestClient {
+fn TestClient::new(app : Mocket) -> TestClient {
   { app, }
 }
 

@@ -179,10 +179,10 @@ fn _build_app() -> @crescent.Mocket {
 ```mbt check
 ///|
 async test "security headers middleware" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.use_middleware(@middleware.security_headers())
   app.get_raw("/test", fn(_) noraise { "ok" })
-  let client = TestClient::new(app)
+  let client = @crescent.TestClient(app)
   let res = client.get("/test")
   guard res.headers
     is { "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", .. } else {
@@ -192,10 +192,10 @@ async test "security headers middleware" {
 
 ///|
 async test "request ID middleware" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.use_middleware(@middleware.request_id())
   app.get_raw("/test", fn(_) noraise { "ok" })
-  let client = TestClient::new(app)
+  let client = @crescent.TestClient(app)
   let res = client.get("/test")
   assert_true(res.headers.get("X-Request-Id") is Some(_))
 }
@@ -209,7 +209,7 @@ async test "request ID middleware" {
 ///|
 async test "create a todo" {
   let app = build_app()
-  let client = TestClient(app)
+  let client = @crescent.TestClient(app)
 
   let res = client.post("/api/todos", body=b"{\"title\":\"Write tests\"}")
   assert_eq(res.status, Created)
@@ -257,12 +257,12 @@ struct TodoInput {
 
 ///|
 async test "typed handler auto-maps errors" {
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.post("/todos", event => {
     let input : TodoInput = event.json()
     HttpResponse::created().json_value(input)
   })
-  let client = TestClient::new(app)
+  let client = @crescent.TestClient(app)
 
   // Valid request
   let res = client.post("/todos", body=b"{\"title\":\"Learn MoonBit\"}")
@@ -347,7 +347,7 @@ struct CreateResItem {
 ///|
 async test "resource CRUD" {
   let items : Array[ResItem] = [{ id: 1, name: "Alpha" }]
-  let app = Mocket::new()
+  let app = @crescent.Mocket()
   app.resource(
     "/items",
     ResourceConfig(
@@ -369,7 +369,7 @@ async test "resource CRUD" {
       },
     ),
   )
-  let client = TestClient::new(app)
+  let client = @crescent.TestClient(app)
 
   // List
   let res = client.get("/items")
@@ -511,7 +511,7 @@ directory index fallback (`index.html`, `index.htm`, ...).
 ```mbt check
 ///|
 test "set and format cookie" {
-  let res = HttpResponse::new(status_code=OK)
+  let res = @crescent.HttpResponse(status_code=OK)
   res.set_cookie(
     "session",
     "abc123",
@@ -735,8 +735,8 @@ fn rate_limiter() -> Middleware {
 ///|
 test "param and param_int" {
   let event = MocketEvent::{
-    req: HttpRequest::new(Get, "/", {}, raw_body=b""),
-    res: HttpResponse::new(status_code=OK),
+    req: HttpRequest(Get, "/", {}, raw_body=b""),
+    res: HttpResponse(status_code=OK),
     params: { "id": "42", "name": "alice" },
   }
   assert_eq(event.param("name"), Some("alice"))
@@ -747,8 +747,8 @@ test "param and param_int" {
 ///|
 test "require_param raises on missing" {
   let event = MocketEvent::{
-    req: HttpRequest::new(Get, "/", {}, raw_body=b""),
-    res: HttpResponse::new(status_code=OK),
+    req: HttpRequest(Get, "/", {}, raw_body=b""),
+    res: HttpResponse(status_code=OK),
     params: {},
   }
   let result = try? event.require_param_int("id")
@@ -779,7 +779,7 @@ struct ReadmeCreateUser {
 
 ///|
 test "json parsing from request body" {
-  let req = HttpRequest::new(
+  let req = @crescent.HttpRequest(
     Post,
     "/users",
     {},
@@ -792,21 +792,21 @@ test "json parsing from request body" {
 
 ///|
 test "try_json returns Result" {
-  let req = HttpRequest::new(Post, "/", {}, raw_body=b"not json")
+  let req = @crescent.HttpRequest(Post, "/", {}, raw_body=b"not json")
   let result : Result[ReadmeCreateUser, String] = req.try_json()
   assert_true(result is Err(_))
 }
 
 ///|
 test "path extracts from request target" {
-  let req = HttpRequest::new(Get, "/api/users?q=test", {}, raw_body=b"")
+  let req = @crescent.HttpRequest(Get, "/api/users?q=test", {}, raw_body=b"")
   let path = req.path()
   assert_eq(path, "/api/users")
 }
 
 ///|
 test "query_params cached and decoded" {
-  let req = HttpRequest::new(
+  let req = @crescent.HttpRequest(
     Get,
     "/search?q=hello%20world&lang=en",
     {},
@@ -841,7 +841,7 @@ test "HttpMethod round-trip" {
 
 ///|
 test "HttpMethod pattern matching" {
-  let req = HttpRequest::new(Get, "/", {}, raw_body=b"")
+  let req = @crescent.HttpRequest(Get, "/", {}, raw_body=b"")
   let label = match req.http_method {
     Get => "read"
     Post => "write"

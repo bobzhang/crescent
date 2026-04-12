@@ -25,7 +25,7 @@ pub fn[T : BodyReader] HttpResponse::read_body(self : HttpResponse) -> T raise {
 
 ///|
 /// Creates a new `HttpResponse` with the given status code and optional headers, cookies, and body.
-pub fn HttpResponse::new(
+fn HttpResponse::new(
   status_code~ : StatusCode,
   headers? : Map[String, String],
   cookies? : Map[String, @cookie.CookieItem],
