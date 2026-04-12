@@ -72,8 +72,8 @@ string comparison — faster than walking the segment array.
 test "static compiled route" {
   let route = @router.CompiledRoute("/api/health")
   assert_true(route.is_static)
-  assert_eq(route.match_path("/api/health"), Some({}))
-  assert_eq(route.match_path("/api/other"), None)
+  debug_inspect(route.match_path("/api/health"), content="Some({})")
+  debug_inspect(route.match_path("/api/other"), content="None")
 }
 ```
 
@@ -84,10 +84,13 @@ as a `StringView` into the original path — no allocation per match:
 ///|
 test "compiled route captures named parameters" {
   let route = @router.CompiledRoute("/users/:userId/posts/:postId")
-  let params = route.match_path("/users/42/posts/7")
-  guard params is Some({ "userId": "42", "postId": "7", .. }) else {
-    fail("expected match")
-  }
+  debug_inspect(
+    route.match_path("/users/42/posts/7"),
+    content=(
+      #|Some({ "userId": <StringView: "42">, "postId": <StringView: "7"> })
+    ),
+  )
+  debug_inspect(route.match_path("/users/42"), content="None")
 }
 ```
 
@@ -102,7 +105,12 @@ test "wildcard matches a single segment" {
   let route = @router.CompiledRoute("/files/*")
   // one segment — matches
   let ok = route.match_path("/files/readme.txt")
-  assert_true(ok is Some(_))
+  debug_inspect(
+    ok,
+    content=(
+      #|Some({ "_": <StringView: "readme.txt"> })
+    ),
+  )
   // two segments — wildcard only captures one, no match
   assert_eq(route.match_path("/files/subdir/readme.txt"), None)
 }
@@ -116,11 +124,12 @@ remainder under the reserved key `"_"`:
 test "globstar captures remaining segments" {
   let route = @router.CompiledRoute("/static/**")
   let params = route.match_path("/static/css/main.css")
-  match params {
-    Some(p) =>
-      assert_eq(p.get("_").map(StringView::to_string), Some("css/main.css"))
-    None => fail("expected match")
-  }
+  debug_inspect(
+    params,
+    content=(
+      #|Some({ "_": <StringView: "css/main.css"> })
+    ),
+  )
 }
 ```
 
@@ -139,30 +148,33 @@ request closure; for a toy example it's just a `String`:
 ///|
 test "radix router dispatches to registered handlers" {
   let router : @router.RadixRouter[String] = RadixRouter()
-  router.insert("GET", @router.CompiledRoute("/api/users"), "list_users")
-  router.insert("GET", @router.CompiledRoute("/api/users/:id"), "get_user")
-  router.insert("POST", @router.CompiledRoute("/api/users"), "create_user")
+  router.insert("GET", CompiledRoute("/api/users"), "list_users")
+  router.insert("GET", CompiledRoute("/api/users/:id"), "get_user")
+  router.insert("POST", CompiledRoute("/api/users"), "create_user")
 
   // GET /api/users — static match
-  match router.search("GET", "/api/users") {
-    Some((handler, _)) => assert_eq(handler, "list_users")
-    None => fail("expected GET /api/users")
-  }
+  debug_inspect(
+    router.search("GET", "/api/users"),
+    content=(
+      #|Some(("list_users", {}))
+    ),
+  )
   // GET /api/users/42 — param match, id captured
-  match router.search("GET", "/api/users/42") {
-    Some((handler, params)) => {
-      assert_eq(handler, "get_user")
-      assert_eq(params.get("id").map(StringView::to_string), Some("42"))
-    }
-    None => fail("expected GET /api/users/42")
-  }
+  debug_inspect(
+    router.search("GET", "/api/users/42"),
+    content=(
+      #|Some(("get_user", { "id": <StringView: "42"> }))
+    ),
+  )
   // POST /api/users — different tree from GET
-  match router.search("POST", "/api/users") {
-    Some((handler, _)) => assert_eq(handler, "create_user")
-    None => fail("expected POST /api/users")
-  }
+  debug_inspect(
+    router.search("POST", "/api/users"),
+    content=(
+      #|Some(("create_user", {}))
+    ),
+  )
   // DELETE is never registered — no match
-  assert_true(router.search("DELETE", "/api/users") is None)
+  debug_inspect(router.search("DELETE", "/api/users"), content="None")
 }
 ```
 
@@ -176,18 +188,22 @@ alongside `/users/:id` without ordering gymnastics:
 ///|
 test "static paths beat parametric siblings" {
   let router : @router.RadixRouter[String] = RadixRouter()
-  router.insert("GET", @router.CompiledRoute("/users/:id"), "get_user")
-  router.insert("GET", @router.CompiledRoute("/users/me"), "current_user")
+  router.insert("GET", CompiledRoute("/users/:id"), "get_user")
+  router.insert("GET", CompiledRoute("/users/me"), "current_user")
   // "me" is a literal match even though :id would also fit
-  match router.search("GET", "/users/me") {
-    Some((h, _)) => assert_eq(h, "current_user")
-    None => fail("expected static hit")
-  }
+  debug_inspect(
+    router.search("GET", "/users/me"),
+    content=(
+      #|Some(("current_user", {}))
+    ),
+  )
   // everything else falls through to the param branch
-  match router.search("GET", "/users/42") {
-    Some((h, _)) => assert_eq(h, "get_user")
-    None => fail("expected param hit")
-  }
+  debug_inspect(
+    router.search("GET", "/users/42"),
+    content=(
+      #|Some(("get_user", { "id": <StringView: "42"> }))
+    ),
+  )
 }
 ```
 
@@ -201,12 +217,22 @@ sub-router, and the parent merges the results at the end:
 ///|
 test "merge folds routes from another router" {
   let router : @router.RadixRouter[String] = RadixRouter()
-  router.insert("GET", @router.CompiledRoute("/api/users/:id"), "get_user")
+  router.insert("GET", CompiledRoute("/api/users/:id"), "get_user")
   let sub : @router.RadixRouter[String] = RadixRouter()
-  sub.insert("POST", @router.CompiledRoute("/api/users"), "create_user")
+  sub.insert("POST", CompiledRoute("/api/users"), "create_user")
   router.merge(sub)
-  assert_true(router.search("GET", "/api/users/1") is Some(_))
-  assert_true(router.search("POST", "/api/users") is Some(_))
+  debug_inspect(
+    router.search("GET", "/api/users/1"),
+    content=(
+      #|Some(("get_user", { "id": <StringView: "1"> }))
+    ),
+  )
+  debug_inspect(
+    router.search("POST", "/api/users"),
+    content=(
+      #|Some(("create_user", {}))
+    ),
+  )
 }
 ```
 
