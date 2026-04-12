@@ -1,5 +1,4 @@
 import {
-  "bobzhang/crescent/uri" @uri,
   "bobzhang/crescent/http" @mhttp,
   "bobzhang/crescent/router" @router,
   "bobzhang/crescent/cookie" @cookie,
@@ -17,6 +16,7 @@ import {
 }
 
 import {
+  "bobzhang/crescent/fetch" @fetch,
   "bobzhang/crescent/middleware" @middleware,
   "moonbitlang/async/os_error",
 } for "test"

@@ -22,7 +22,7 @@ fn FetchProtocol::scheme(self : FetchProtocol) -> String {
 
 ///|
 fn request_method_to_async(
-  http_method : HttpMethod,
+  http_method : @crescent.HttpMethod,
 ) -> @http.RequestMethod raise Error {
   match http_method {
     Get => Get
@@ -36,15 +36,6 @@ fn request_method_to_async(
     Connect => Connect
     Other(m) => raise FetchError::RequestFailed("unsupported HTTP method: \{m}")
   }
-}
-
-///|
-fn response_headers_from_async(
-  headers : Map[String, String],
-) -> Map[String, String] {
-  let copied : Map[String, String] = {}
-  headers.each((key, value) => copied.set(key, value))
-  copied
 }
 
 /// Converts a BytesView (from the uri package) to a String by UTF-8 decoding.
@@ -240,25 +231,30 @@ fn fetch_origin(protocol : FetchProtocol, host : String, port : Int) -> String {
 ///|
 fn prepare_fetch_payload_bytes(
   body : String?,
-  data : &Responder?,
+  data : &@crescent.Responder?,
   headers : Map[String, String]?,
 ) -> (Bytes?, Map[String, String]) {
-  let req_headers = copy_headers(headers.unwrap_or({}))
+  let req_headers = @mhttp.copy_headers(headers.unwrap_or({}))
   let req_body = match body {
     Some(raw_body) => Some(@utf8.encode(raw_body))
     None =>
       match data {
         Some(responder_data) => {
-          let res = HttpResponse(status_code=OK)
+          let res = @crescent.HttpResponse(status_code=OK)
           responder_data.options(res)
           res.headers.each((key, value) => {
             if !@mhttp.has_header_case_insensitive(req_headers, key) {
               req_headers.set(key.to_string(), value.to_string())
             }
           })
-          let body_buf = @buffer.new()
-          responder_data.output(body_buf)
-          Some(body_buf.to_bytes())
+          match responder_data.output_bytes() {
+            Some(bytes) => Some(bytes)
+            None => {
+              let body_buf = @buffer.new()
+              responder_data.output(body_buf)
+              Some(body_buf.to_bytes())
+            }
+          }
         }
         None => None
       }
@@ -271,12 +267,12 @@ fn prepare_fetch_payload_bytes(
 pub async fn fetch(
   url : String,
   body? : String,
-  http_method : HttpMethod,
-  data? : &Responder,
+  http_method : @crescent.HttpMethod,
+  data? : &@crescent.Responder,
   headers? : Map[String, String],
   credentials? : FetchCredentials,
   mode? : FetchMode,
-) -> HttpResponse raise Error {
+) -> @crescent.HttpResponse raise Error {
   ignore(credentials)
   ignore(mode)
   let (req_body, req_headers) = prepare_fetch_payload_bytes(body, data, headers)
@@ -303,8 +299,8 @@ pub async fn fetch(
       err => raise FetchError::RequestFailed("\{err}")
     }
   HttpResponse(
-    status_code=StatusCode::from_int(response.code),
-    headers=response_headers_from_async(response.headers),
+    status_code=@crescent.StatusCode::from_int(response.code),
+    headers=@mhttp.copy_headers(response.headers),
     raw_body=response_body,
   )
 }

@@ -263,7 +263,7 @@ fn static_not_modified_headers(
   response_headers : Map[String, String],
   meta : StaticAssetMeta,
 ) -> Map[String, String] {
-  let headers = copy_headers(response_headers)
+  let headers = @mhttp.copy_headers(response_headers)
   match meta.etag {
     Some(etag) => headers.set("ETag", etag)
     None => ()
@@ -428,7 +428,7 @@ pub fn Mocket::static_assets(
           }
           let asset_headers = static_asset_headers(provider, id, meta)
           if event.req.http_method == Head {
-            let head_headers = copy_headers(event.res.headers)
+            let head_headers = @mhttp.copy_headers(event.res.headers)
             asset_headers.each((key, value) => {
               if !@mhttp.has_header_case_insensitive(head_headers, key) {
                 head_headers.set(key, value)

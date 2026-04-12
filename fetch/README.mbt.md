@@ -1,12 +1,8 @@
 # Fetch
 
-A small ergonomic wrapper around `@crescent.fetch` that mirrors the browser
-`fetch` API: one function per HTTP verb, one generic `request` entry point
+An HTTP client package that mirrors the browser `fetch` API: one function
+per HTTP verb, plus a generic `fetch` entry point and a `request` function
 for full control.
-
-The underlying transport lives in the main `crescent` package — this
-sub-package exists solely to give you a *verb-named* surface that reads
-naturally at the call site:
 
 ```moonbit nocheck
 ///|
@@ -23,14 +19,14 @@ positional argument:
 ```moonbit nocheck
 ///|
 async fn load_profile_raw() -> @crescent.HttpResponse raise Error {
-  @crescent.fetch("https://api.example.com/me", Get, headers={
+  @fetch.fetch("https://api.example.com/me", Get, headers={
     "Authorization": "Bearer eyJ...",
   })
 }
 ```
 
 Both are valid. `@fetch.get` is easier to read when you already know the
-method; `@crescent.fetch` is easier to use when you're routing the call
+method; `@fetch.fetch` is easier to use when you're routing the call
 through a variable.
 
 ## The Verb Menu
@@ -215,19 +211,19 @@ accepted but **not enforced**:
 ```mbt check
 ///|
 test "FetchCredentials renders to canonical browser strings" {
-  assert_eq(@crescent.FetchCredentials::Omit.to_string(), "omit")
-  assert_eq(@crescent.FetchCredentials::SameOrigin.to_string(), "same-origin")
-  assert_eq(@crescent.FetchCredentials::Include.to_string(), "include")
+  assert_eq(@fetch.FetchCredentials::Omit.to_string(), "omit")
+  assert_eq(@fetch.FetchCredentials::SameOrigin.to_string(), "same-origin")
+  assert_eq(@fetch.FetchCredentials::Include.to_string(), "include")
 }
 ```
 
 ```mbt check
 ///|
 test "FetchMode renders to canonical browser strings" {
-  assert_eq(@crescent.FetchMode::Cors.to_string(), "cors")
-  assert_eq(@crescent.FetchMode::NoCors.to_string(), "no-cors")
-  assert_eq(@crescent.FetchMode::SameOrigin.to_string(), "same-origin")
-  assert_eq(@crescent.FetchMode::Navigate.to_string(), "navigate")
+  assert_eq(@fetch.FetchMode::Cors.to_string(), "cors")
+  assert_eq(@fetch.FetchMode::NoCors.to_string(), "no-cors")
+  assert_eq(@fetch.FetchMode::SameOrigin.to_string(), "same-origin")
+  assert_eq(@fetch.FetchMode::Navigate.to_string(), "navigate")
 }
 ```
 

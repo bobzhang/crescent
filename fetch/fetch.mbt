@@ -5,13 +5,11 @@ pub async fn request(
   req : @crescent.HttpRequest,
 ) -> @crescent.HttpResponse raise Error {
   let http_method = req.http_method
-  let headers : Map[String, String] = {}
-  req.headers.each((k, v) => headers.set(k.to_string(), v.to_string()))
   if req.raw_body.length() == 0 {
-    @crescent.fetch(req.url, http_method, headers~)
+    fetch(req.url, http_method, headers=req.headers)
   } else {
     let data = req.raw_body
-    @crescent.fetch(req.url, http_method, data~, headers~)
+    fetch(req.url, http_method, data~, headers=req.headers)
   }
 }
 
@@ -22,10 +20,10 @@ pub async fn get(
   url : String,
   data? : &@crescent.Responder,
   headers? : Map[String, String],
-  credentials? : @crescent.FetchCredentials,
-  mode? : @crescent.FetchMode,
+  credentials? : FetchCredentials,
+  mode? : FetchMode,
 ) -> @crescent.HttpResponse raise Error {
-  @crescent.fetch(url, Get, data?, headers?, credentials?, mode?)
+  fetch(url, Get, data?, headers?, credentials?, mode?)
 }
 
 ///|
@@ -35,10 +33,10 @@ pub async fn delete(
   url : String,
   data? : &@crescent.Responder,
   headers? : Map[String, String],
-  credentials? : @crescent.FetchCredentials,
-  mode? : @crescent.FetchMode,
+  credentials? : FetchCredentials,
+  mode? : FetchMode,
 ) -> @crescent.HttpResponse raise Error {
-  @crescent.fetch(url, Delete, data?, headers?, credentials?, mode?)
+  fetch(url, Delete, data?, headers?, credentials?, mode?)
 }
 
 ///|
@@ -48,10 +46,10 @@ pub async fn head(
   url : String,
   data? : &@crescent.Responder,
   headers? : Map[String, String],
-  credentials? : @crescent.FetchCredentials,
-  mode? : @crescent.FetchMode,
+  credentials? : FetchCredentials,
+  mode? : FetchMode,
 ) -> @crescent.HttpResponse raise Error {
-  @crescent.fetch(url, Head, data?, headers?, credentials?, mode?)
+  fetch(url, Head, data?, headers?, credentials?, mode?)
 }
 
 ///|
@@ -61,10 +59,10 @@ pub async fn options(
   url : String,
   data? : &@crescent.Responder,
   headers? : Map[String, String],
-  credentials? : @crescent.FetchCredentials,
-  mode? : @crescent.FetchMode,
+  credentials? : FetchCredentials,
+  mode? : FetchMode,
 ) -> @crescent.HttpResponse raise Error {
-  @crescent.fetch(url, Options, data?, headers?, credentials?, mode?)
+  fetch(url, Options, data?, headers?, credentials?, mode?)
 }
 
 ///|
@@ -74,10 +72,10 @@ pub async fn trace(
   url : String,
   data? : &@crescent.Responder,
   headers? : Map[String, String],
-  credentials? : @crescent.FetchCredentials,
-  mode? : @crescent.FetchMode,
+  credentials? : FetchCredentials,
+  mode? : FetchMode,
 ) -> @crescent.HttpResponse raise Error {
-  @crescent.fetch(url, Trace, data?, headers?, credentials?, mode?)
+  fetch(url, Trace, data?, headers?, credentials?, mode?)
 }
 
 ///|
@@ -87,10 +85,10 @@ pub async fn connect(
   url : String,
   data? : &@crescent.Responder,
   headers? : Map[String, String],
-  credentials? : @crescent.FetchCredentials,
-  mode? : @crescent.FetchMode,
+  credentials? : FetchCredentials,
+  mode? : FetchMode,
 ) -> @crescent.HttpResponse raise Error {
-  @crescent.fetch(url, Connect, data?, headers?, credentials?, mode?)
+  fetch(url, Connect, data?, headers?, credentials?, mode?)
 }
 
 ///|
@@ -100,10 +98,10 @@ pub async fn post(
   url : String,
   data? : &@crescent.Responder,
   headers? : Map[String, String],
-  credentials? : @crescent.FetchCredentials,
-  mode? : @crescent.FetchMode,
+  credentials? : FetchCredentials,
+  mode? : FetchMode,
 ) -> @crescent.HttpResponse raise Error {
-  @crescent.fetch(url, Post, data?, headers?, credentials?, mode?)
+  fetch(url, Post, data?, headers?, credentials?, mode?)
 }
 
 ///|
@@ -113,10 +111,10 @@ pub async fn put(
   url : String,
   data? : &@crescent.Responder,
   headers? : Map[String, String],
-  credentials? : @crescent.FetchCredentials,
-  mode? : @crescent.FetchMode,
+  credentials? : FetchCredentials,
+  mode? : FetchMode,
 ) -> @crescent.HttpResponse raise Error {
-  @crescent.fetch(url, Put, data?, headers?, credentials?, mode?)
+  fetch(url, Put, data?, headers?, credentials?, mode?)
 }
 
 ///|
@@ -126,8 +124,8 @@ pub async fn patch(
   url : String,
   data? : &@crescent.Responder,
   headers? : Map[String, String],
-  credentials? : @crescent.FetchCredentials,
-  mode? : @crescent.FetchMode,
+  credentials? : FetchCredentials,
+  mode? : FetchMode,
 ) -> @crescent.HttpResponse raise Error {
-  @crescent.fetch(url, Patch, data?, headers?, credentials?, mode?)
+  fetch(url, Patch, data?, headers?, credentials?, mode?)
 }

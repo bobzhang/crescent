@@ -1,5 +1,3 @@
-// HttpMethod is defined in http_method.mbt
-
 ///|
 /// Controls whether credentials (cookies, TLS certificates) are sent with a fetch request.
 ///
@@ -51,10 +49,3 @@ pub fn FetchMode::to_string(self : FetchMode) -> String {
 pub suberror FetchError {
   RequestFailed(String)
 } derive(Debug)
-
-///|
-fn copy_headers(headers : Map[String, String]) -> Map[String, String] {
-  let out : Map[String, String] = {}
-  headers.each(fn(k, v) { out.set(k, v) })
-  out
-}

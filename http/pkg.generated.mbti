@@ -4,6 +4,8 @@ package "bobzhang/crescent/http"
 // Values
 pub fn append_token_case_insensitive(Map[String, String], String, String) -> Unit
 
+pub fn copy_headers(Map[String, String]) -> Map[String, String]
+
 pub fn first_multipart_value(Map[String, Array[MultipartFormValue]], String) -> MultipartFormValue?
 
 pub fn form_encode(Map[String, String]) -> String

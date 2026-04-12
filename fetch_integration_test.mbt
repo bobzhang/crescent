@@ -17,7 +17,7 @@ async test "fetch uses async client for request headers and payloads" {
     event.req.raw_body
   })
   with_test_server(app, port => {
-    let response1 = fetch(localhost_url(port, "/fetch/hello?via=async"), Get, headers={
+    let response1 = @fetch.get(localhost_url(port, "/fetch/hello?via=async"), headers={
       "X-Name": "moon",
     })
     assert_eq(response1.status_code, OK)
@@ -25,7 +25,7 @@ async test "fetch uses async client for request headers and payloads" {
     inspect(body1, content="hello:moon")
     inspect(response1.headers.get("x-reply").unwrap_or(""), content="native")
 
-    let response2 = fetch(
+    let response2 = @fetch.fetch(
       localhost_url(port, "/fetch/echo"),
       Post,
       body="payload",
@@ -36,16 +36,15 @@ async test "fetch uses async client for request headers and payloads" {
     inspect(body2, content="post:payload")
     inspect(response2.headers.get("x-body-len").unwrap_or(""), content="7")
 
-    let response3 = fetch(
+    let response3 = @fetch.patch(
       localhost_url(port, "/fetch/bin"),
-      Patch,
       data=b"\x00\x01\x02",
     )
     assert_eq(response3.status_code, OK)
     assert_eq(response3.raw_body, b"\x00\x01\x02")
     inspect(response3.headers.get("x-body-len").unwrap_or(""), content="3")
 
-    let response4 = fetch("http://127.0.0.1:\{port}?via=query", Get)
+    let response4 = @fetch.get("http://127.0.0.1:\{port}?via=query")
     assert_eq(response4.status_code, OK)
     let body4 : String = response4.read_body()
     inspect(body4, content="root")
@@ -71,10 +70,9 @@ async test "fetch preserves explicit content-type without duplicate request head
       )
     })
 
-    let response = fetch(
+    let response = @fetch.post(
       "http://127.0.0.1:\{port}/request",
-      Post,
-      data=text("body"),
+      data=@crescent.text("body"),
       headers={ "content-type": "application/custom", "X-Test": "yes" },
     )
     assert_eq(response.status_code, OK)
@@ -97,7 +95,7 @@ async test "fetch supports head and rejects unsupported protocols" {
     @crescent.HttpResponse(status_code=NoContent).body("ignored")
   })
   with_test_server(app, port => {
-    let response = fetch(localhost_url(port, "/fetch/head"), Head)
+    let response = @fetch.head(localhost_url(port, "/fetch/head"))
     assert_eq(response.status_code, NoContent)
     let body : String = response.read_body()
     inspect(body, content="")
@@ -107,9 +105,9 @@ async test "fetch supports head and rejects unsupported protocols" {
     err => raise err
   }
 
-  let unsupported = try? fetch("ftp://example.com/data", Get)
+  let unsupported = try? @fetch.get("ftp://example.com/data")
   match unsupported {
-    Err(FetchError::RequestFailed(message)) =>
+    Err(@fetch.FetchError::RequestFailed(message)) =>
       inspect(message, content="unsupported protocol: ftp")
     Err(err) => fail("unexpected error: \{err}")
     Ok(_) => fail("expected fetch to reject unsupported protocol")

@@ -3,32 +3,52 @@ package "bobzhang/crescent/fetch"
 
 import {
   "bobzhang/crescent",
+  "moonbitlang/core/debug",
 }
 
 // Values
-pub async fn connect(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : @crescent.FetchCredentials, mode? : @crescent.FetchMode) -> @crescent.HttpResponse
+pub async fn connect(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : FetchCredentials, mode? : FetchMode) -> @crescent.HttpResponse
 
-pub async fn delete(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : @crescent.FetchCredentials, mode? : @crescent.FetchMode) -> @crescent.HttpResponse
+pub async fn delete(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : FetchCredentials, mode? : FetchMode) -> @crescent.HttpResponse
 
-pub async fn get(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : @crescent.FetchCredentials, mode? : @crescent.FetchMode) -> @crescent.HttpResponse
+pub async fn fetch(String, body? : String, @crescent.HttpMethod, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : FetchCredentials, mode? : FetchMode) -> @crescent.HttpResponse
 
-pub async fn head(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : @crescent.FetchCredentials, mode? : @crescent.FetchMode) -> @crescent.HttpResponse
+pub async fn get(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : FetchCredentials, mode? : FetchMode) -> @crescent.HttpResponse
 
-pub async fn options(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : @crescent.FetchCredentials, mode? : @crescent.FetchMode) -> @crescent.HttpResponse
+pub async fn head(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : FetchCredentials, mode? : FetchMode) -> @crescent.HttpResponse
 
-pub async fn patch(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : @crescent.FetchCredentials, mode? : @crescent.FetchMode) -> @crescent.HttpResponse
+pub async fn options(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : FetchCredentials, mode? : FetchMode) -> @crescent.HttpResponse
 
-pub async fn post(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : @crescent.FetchCredentials, mode? : @crescent.FetchMode) -> @crescent.HttpResponse
+pub async fn patch(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : FetchCredentials, mode? : FetchMode) -> @crescent.HttpResponse
 
-pub async fn put(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : @crescent.FetchCredentials, mode? : @crescent.FetchMode) -> @crescent.HttpResponse
+pub async fn post(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : FetchCredentials, mode? : FetchMode) -> @crescent.HttpResponse
+
+pub async fn put(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : FetchCredentials, mode? : FetchMode) -> @crescent.HttpResponse
 
 pub async fn request(@crescent.HttpRequest) -> @crescent.HttpResponse
 
-pub async fn trace(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : @crescent.FetchCredentials, mode? : @crescent.FetchMode) -> @crescent.HttpResponse
+pub async fn trace(String, data? : &@crescent.Responder, headers? : Map[String, String], credentials? : FetchCredentials, mode? : FetchMode) -> @crescent.HttpResponse
 
 // Errors
+pub suberror FetchError {
+  RequestFailed(String)
+} derive(@debug.Debug)
 
 // Types and methods
+pub(all) enum FetchCredentials {
+  Omit
+  SameOrigin
+  Include
+} derive(Eq, @debug.Debug)
+pub fn FetchCredentials::to_string(Self) -> String
+
+pub(all) enum FetchMode {
+  Cors
+  NoCors
+  SameOrigin
+  Navigate
+} derive(Eq, @debug.Debug)
+pub fn FetchMode::to_string(Self) -> String
 
 // Type aliases
 
