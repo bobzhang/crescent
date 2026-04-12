@@ -1,6 +1,7 @@
 ///|
 /// A test HTTP client that dispatches requests directly without network I/O.
 pub struct TestClient {
+  /// The application instance to dispatch requests against.
   priv app : Mocket
 
   fn new(app : Mocket) -> TestClient
@@ -9,8 +10,11 @@ pub struct TestClient {
 ///|
 /// The response from a `TestClient` request, containing status, headers, and body.
 pub struct TestResponse {
+  /// The HTTP status code returned by the handler.
   status : StatusCode
+  /// Response headers as key-value pairs.
   headers : Map[String, String]
+  /// The raw response body bytes.
   body_bytes : Bytes
 } derive(Debug(ignore=Bytes))
 

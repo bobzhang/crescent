@@ -1,8 +1,11 @@
 ///|
 /// A single value from a multipart form submission, containing optional filename, content type, and raw data.
 pub(all) struct MultipartFormValue {
+  /// Original filename from the `Content-Disposition` header, if present.
   filename : String?
+  /// MIME type from the part's `Content-Type` header, if present.
   content_type : String?
+  /// Raw bytes of the part body.
   data : BytesView
 }
 

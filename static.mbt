@@ -1,11 +1,17 @@
 ///|
 /// Metadata describing a static asset including its content type, ETag, modification time, and size.
 pub(all) struct StaticAssetMeta {
+  /// MIME type of the asset (e.g., `"text/css"`, `"image/png"`).
   asset_type : String?
+  /// Entity tag for cache validation (e.g., `"W/\"16af-1234\""`).
   etag : String?
+  /// Last modification time as a Unix timestamp in seconds.
   mtime : Int64?
+  /// Filesystem path to the resolved asset.
   path : String?
+  /// File size in bytes.
   size : Int64?
+  /// Content encoding if pre-compressed (e.g., `"gzip"`, `"br"`).
   encoding : String?
 
   fn new(

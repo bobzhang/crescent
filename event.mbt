@@ -1,8 +1,11 @@
 ///|
 /// The event passed to each HTTP handler, bundling the request, response, and route parameters.
 pub(all) struct MocketEvent {
+  /// The incoming HTTP request (method, URL, headers, body).
   req : HttpRequest
+  /// The outgoing HTTP response being built (status, headers, cookies, body).
   res : HttpResponse
+  /// Route parameters extracted from the matched URL pattern (e.g., `":id" => "42"`).
   params : Map[String, StringView]
 }
 

@@ -27,13 +27,21 @@ pub impl ToJson for SameSiteOption with to_json(self : SameSiteOption) -> Json {
 ///|
 /// Represents an HTTP cookie with its name, value, and optional attributes.
 pub(all) struct CookieItem {
+  /// Cookie name (the key in `name=value`).
   name : String
+  /// Cookie value.
   value : String
+  /// Expiry in seconds from now; `0` deletes the cookie.
   max_age : Int?
+  /// URL path scope for which the browser sends this cookie.
   path : String?
+  /// Domain scope for which the browser sends this cookie.
   domain : String?
+  /// If `true`, the cookie is only sent over HTTPS.
   secure : Bool?
+  /// If `true`, JavaScript cannot access the cookie (`document.cookie`).
   http_only : Bool?
+  /// Cross-site request policy (`Lax`, `Strict`, or `SameSiteNone`).
   same_site : SameSiteOption?
 
   fn new(
