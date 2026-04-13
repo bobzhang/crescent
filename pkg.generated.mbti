@@ -41,6 +41,10 @@ pub suberror NetworkError derive(@debug.Debug)
 type Html
 pub impl Responder for Html
 
+pub(all) struct HttpHandler(async (MocketEvent) -> &Responder noraise)
+#deprecated
+pub fn HttpHandler::inner(Self) -> async (MocketEvent) -> &Responder noraise
+
 pub(all) enum HttpMethod {
   Get
   Head
@@ -117,27 +121,27 @@ pub struct Mocket {
   fn new(base_path? : String) -> Mocket
 }
 pub fn Mocket::all(Self, String, async (MocketEvent) -> &Responder) -> Unit
-pub fn Mocket::all_raw(Self, String, async (MocketEvent) -> &Responder noraise) -> Unit
+pub fn Mocket::all_raw(Self, String, HttpHandler) -> Unit
 pub fn Mocket::connect(Self, String, async (MocketEvent) -> &Responder) -> Unit
-pub fn Mocket::connect_raw(Self, String, async (MocketEvent) -> &Responder noraise) -> Unit
+pub fn Mocket::connect_raw(Self, String, HttpHandler) -> Unit
 pub fn Mocket::delete(Self, String, async (MocketEvent) -> &Responder) -> Unit
-pub fn Mocket::delete_raw(Self, String, async (MocketEvent) -> &Responder noraise) -> Unit
+pub fn Mocket::delete_raw(Self, String, HttpHandler) -> Unit
 pub async fn Mocket::dispatch(Self, String, String, Map[String, String], Bytes) -> (StatusCode, Map[String, String], Bytes)
 pub fn Mocket::get(Self, String, async (MocketEvent) -> &Responder) -> Unit
-pub fn Mocket::get_raw(Self, String, async (MocketEvent) -> &Responder noraise) -> Unit
+pub fn Mocket::get_raw(Self, String, HttpHandler) -> Unit
 pub fn Mocket::group(Self, String, (Self) -> Unit) -> Unit
 pub fn Mocket::has_not_found_handler(Self) -> Bool
 pub fn Mocket::head(Self, String, async (MocketEvent) -> &Responder) -> Unit
-pub fn Mocket::head_raw(Self, String, async (MocketEvent) -> &Responder noraise) -> Unit
-pub fn Mocket::on(Self, String, String, async (MocketEvent) -> &Responder noraise) -> Unit
+pub fn Mocket::head_raw(Self, String, HttpHandler) -> Unit
+pub fn Mocket::on(Self, String, String, HttpHandler) -> Unit
 pub fn Mocket::options(Self, String, async (MocketEvent) -> &Responder) -> Unit
-pub fn Mocket::options_raw(Self, String, async (MocketEvent) -> &Responder noraise) -> Unit
+pub fn Mocket::options_raw(Self, String, HttpHandler) -> Unit
 pub fn Mocket::patch(Self, String, async (MocketEvent) -> &Responder) -> Unit
-pub fn Mocket::patch_raw(Self, String, async (MocketEvent) -> &Responder noraise) -> Unit
+pub fn Mocket::patch_raw(Self, String, HttpHandler) -> Unit
 pub fn Mocket::post(Self, String, async (MocketEvent) -> &Responder) -> Unit
-pub fn Mocket::post_raw(Self, String, async (MocketEvent) -> &Responder noraise) -> Unit
+pub fn Mocket::post_raw(Self, String, HttpHandler) -> Unit
 pub fn Mocket::put(Self, String, async (MocketEvent) -> &Responder) -> Unit
-pub fn Mocket::put_raw(Self, String, async (MocketEvent) -> &Responder noraise) -> Unit
+pub fn Mocket::put_raw(Self, String, HttpHandler) -> Unit
 pub fn Mocket::resource(Self, String, ResourceConfig) -> Unit
 pub fn Mocket::routes(Self) -> Iter[(String, String)]
 pub async fn Mocket::serve(Self, port~ : Int) -> Unit
@@ -148,10 +152,10 @@ pub async fn Mocket::serve_on_with(Self, @http.Server, NativeServeOptions) -> Un
 pub async fn Mocket::serve_until(Self, port~ : Int, @aqueue.Queue[Unit]) -> Unit
 pub async fn Mocket::serve_until_with(Self, port~ : Int, @aqueue.Queue[Unit], NativeServeOptions) -> Unit
 pub async fn Mocket::serve_with(Self, port~ : Int, NativeServeOptions) -> Unit
-pub fn Mocket::set_not_found_handler(Self, async (MocketEvent) -> &Responder noraise) -> Unit
+pub fn Mocket::set_not_found_handler(Self, HttpHandler) -> Unit
 pub fn Mocket::static_assets(Self, String, &ServeStaticProvider) -> Unit
 pub fn Mocket::trace(Self, String, async (MocketEvent) -> &Responder) -> Unit
-pub fn Mocket::trace_raw(Self, String, async (MocketEvent) -> &Responder noraise) -> Unit
+pub fn Mocket::trace_raw(Self, String, HttpHandler) -> Unit
 pub fn Mocket::use_middleware(Self, async (MocketEvent, async () -> &Responder noraise) -> &Responder noraise, base_path? : String) -> Unit
 pub fn Mocket::ws(Self, String, (WebSocketEvent) -> Unit) -> Unit
 
@@ -330,8 +334,6 @@ pub fn WebSocketPeer::to_string(Self) -> String
 pub fn WebSocketPeer::unsubscribe(Self, String) -> Unit
 
 // Type aliases
-pub type HttpHandler = async (MocketEvent) -> &Responder noraise
-
 pub type Middleware = async (MocketEvent, async () -> &Responder noraise) -> &Responder noraise
 
 pub type MiddlewareNext = async () -> &Responder noraise
