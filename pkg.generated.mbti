@@ -115,6 +115,14 @@ pub fn HttpResponse::to_responder(Self) -> &Responder
 pub fn HttpResponse::unauthorized() -> Self
 pub impl Responder for HttpResponse
 
+pub(all) struct Middleware(async (MocketEvent, MiddlewareNext) -> &Responder noraise)
+#deprecated
+pub fn Middleware::inner(Self) -> async (MocketEvent, MiddlewareNext) -> &Responder noraise
+
+pub(all) struct MiddlewareNext(async () -> &Responder noraise)
+#deprecated
+pub fn MiddlewareNext::inner(Self) -> async () -> &Responder noraise
+
 pub struct Mocket {
   // private fields
 
@@ -156,8 +164,8 @@ pub fn Mocket::set_not_found_handler(Self, HttpHandler) -> Unit
 pub fn Mocket::static_assets(Self, String, &ServeStaticProvider) -> Unit
 pub fn Mocket::trace(Self, String, async (MocketEvent) -> &Responder) -> Unit
 pub fn Mocket::trace_raw(Self, String, HttpHandler) -> Unit
-pub fn Mocket::use_middleware(Self, async (MocketEvent, async () -> &Responder noraise) -> &Responder noraise, base_path? : String) -> Unit
-pub fn Mocket::ws(Self, String, (WebSocketEvent) -> Unit) -> Unit
+pub fn Mocket::use_middleware(Self, Middleware, base_path? : String) -> Unit
+pub fn Mocket::ws(Self, String, WebSocketHandler) -> Unit
 
 pub(all) struct MocketEvent {
   req : HttpRequest
@@ -320,6 +328,10 @@ pub enum WebSocketEvent {
   Close(WebSocketPeer)
 }
 
+pub(all) struct WebSocketHandler((WebSocketEvent) -> Unit)
+#deprecated
+pub fn WebSocketHandler::inner(Self) -> (WebSocketEvent) -> Unit
+
 pub struct WebSocketPeer {
   // private fields
 
@@ -334,11 +346,6 @@ pub fn WebSocketPeer::to_string(Self) -> String
 pub fn WebSocketPeer::unsubscribe(Self, String) -> Unit
 
 // Type aliases
-pub type Middleware = async (MocketEvent, async () -> &Responder noraise) -> &Responder noraise
-
-pub type MiddlewareNext = async () -> &Responder noraise
-
-pub type WebSocketHandler = (WebSocketEvent) -> Unit
 
 // Traits
 pub(open) trait BodyReader {
