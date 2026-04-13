@@ -72,14 +72,24 @@ raises a `ParseError` if the input does not conform to the RFC 3986 grammar.
 ///|
 test "parse a full http URL" {
   let uri = @uri.Uri("http://example.com/path/to/resource?q=hello#frag")
-  assert_eq(uri.scheme, Some("http"))
-  assert_eq(uri.path, ["path", "to", "resource"])
-  assert_eq(uri.query, Some("q=hello"))
-  assert_eq(uri.fragment, Some("frag"))
-  guard uri.authority is Some(auth) else { fail("expected authority") }
-  assert_true(auth.host is RegName("example.com"))
-  assert_eq(auth.port, None)
-  assert_eq(auth.userinfo, None)
+  debug_inspect(
+    uri,
+    content=(
+      #|{
+      #|  scheme: Some(<StringView: "http">),
+      #|  authority: Some(
+      #|    {
+      #|      userinfo: None,
+      #|      host: RegName(<StringView: "example.com">),
+      #|      port: None,
+      #|    },
+      #|  ),
+      #|  path: [<StringView: "path">, <StringView: "to">, <StringView: "resource">],
+      #|  query: Some(<StringView: "q=hello">),
+      #|  fragment: Some(<StringView: "frag">),
+      #|}
+    ),
+  )
 }
 ```
 
@@ -95,11 +105,24 @@ so the IPv6-vs-reg-name distinction is never lost:
 ///|
 test "parse authority with userinfo and port" {
   let uri = @uri.Uri("ftp://admin:secret@files.example.com:2121/pub")
-  guard uri.authority is Some(auth) else { fail("expected authority") }
-  assert_eq(auth.userinfo, Some("admin:secret"))
-  assert_true(auth.host is RegName("files.example.com"))
-  assert_eq(auth.port, Some(2121))
-  assert_eq(uri.path, ["pub"])
+  debug_inspect(
+    uri,
+    content=(
+      #|{
+      #|  scheme: Some(<StringView: "ftp">),
+      #|  authority: Some(
+      #|    {
+      #|      userinfo: Some(<StringView: "admin:secret">),
+      #|      host: RegName(<StringView: "files.example.com">),
+      #|      port: Some(2121),
+      #|    },
+      #|  ),
+      #|  path: [<StringView: "pub">],
+      #|  query: None,
+      #|  fragment: None,
+      #|}
+    ),
+  )
 }
 ```
 
@@ -114,9 +137,24 @@ branch on the variant without any string inspection:
 ///|
 test "parse an IPv6 literal host" {
   let uri = @uri.Uri("http://[2001:db8::1]:8080/api")
-  guard uri.authority is Some(auth) else { fail("expected authority") }
-  assert_true(auth.host is IPv6Address("2001:db8::1"))
-  assert_eq(auth.port, Some(8080))
+  debug_inspect(
+    uri,
+    content=(
+      #|{
+      #|  scheme: Some(<StringView: "http">),
+      #|  authority: Some(
+      #|    {
+      #|      userinfo: None,
+      #|      host: IPv6Address(<StringView: "2001:db8::1">),
+      #|      port: Some(8080),
+      #|    },
+      #|  ),
+      #|  path: [<StringView: "api">],
+      #|  query: None,
+      #|  fragment: None,
+      #|}
+    ),
+  )
 }
 ```
 
@@ -135,21 +173,39 @@ All of these parse into a `Uri` where the missing components are `None`.
 ///|
 test "parse an absolute-path reference" {
   let uri = @uri.Uri("/absolute/path")
-  assert_eq(uri.scheme, None)
-  assert_true(uri.authority is None)
-  assert_eq(uri.path, ["absolute", "path"])
+  debug_inspect(
+    uri,
+    content=(
+      #|{
+      #|  scheme: None,
+      #|  authority: None,
+      #|  path: [<StringView: "absolute">, <StringView: "path">],
+      #|  query: None,
+      #|  fragment: None,
+      #|}
+    ),
+  )
 }
 ```
 
 ```mbt check
 ///|
 test "parse a relative reference with .. segments" {
-  let uri = @uri.Uri("../path/file.txt")
-  assert_eq(uri.scheme, None)
-  assert_true(uri.authority is None)
   // Dot segments are preserved in the path — they are not resolved by the
   // parser. Apply your own normalization if you need it.
-  assert_eq(uri.path, ["..", "path", "file.txt"])
+  let uri = @uri.Uri("../path/file.txt")
+  debug_inspect(
+    uri,
+    content=(
+      #|{
+      #|  scheme: None,
+      #|  authority: None,
+      #|  path: [<StringView: "..">, <StringView: "path">, <StringView: "file.txt">],
+      #|  query: None,
+      #|  fragment: None,
+      #|}
+    ),
+  )
 }
 ```
 
@@ -157,11 +213,18 @@ test "parse a relative reference with .. segments" {
 ///|
 test "parse a fragment-only reference" {
   let uri = @uri.Uri("#section-2")
-  assert_eq(uri.scheme, None)
-  assert_true(uri.authority is None)
-  assert_eq(uri.path, [])
-  assert_eq(uri.query, None)
-  assert_eq(uri.fragment, Some("section-2"))
+  debug_inspect(
+    uri,
+    content=(
+      #|{
+      #|  scheme: None,
+      #|  authority: None,
+      #|  path: [],
+      #|  query: None,
+      #|  fragment: Some(<StringView: "section-2">),
+      #|}
+    ),
+  )
 }
 ```
 
@@ -177,7 +240,24 @@ or encoded:
 ///|
 test "percent-encoded sequences are preserved verbatim" {
   let uri = @uri.Uri("http://example.com/hello%20world")
-  assert_eq(uri.path, ["hello%20world"])
+  debug_inspect(
+    uri,
+    content=(
+      #|{
+      #|  scheme: Some(<StringView: "http">),
+      #|  authority: Some(
+      #|    {
+      #|      userinfo: None,
+      #|      host: RegName(<StringView: "example.com">),
+      #|      port: None,
+      #|    },
+      #|  ),
+      #|  path: [<StringView: "hello%20world">],
+      #|  query: None,
+      #|  fragment: None,
+      #|}
+    ),
+  )
 }
 ```
 
