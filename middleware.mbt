@@ -1,10 +1,12 @@
 ///|
 /// The continuation function passed to middleware, calling the next handler in the chain.
-pub type MiddlewareNext = async () -> &Responder noraise
+pub(all) struct MiddlewareNext(async () -> &Responder noraise)
 
 ///|
 /// A middleware function that receives a request event and a next continuation, and returns a response.
-pub type Middleware = async (MocketEvent, MiddlewareNext) -> &Responder noraise
+pub(all) struct Middleware(
+  async (MocketEvent, MiddlewareNext) -> &Responder noraise
+)
 
 ///|
 fn normalize_middleware_base_path(base_path : String) -> String {

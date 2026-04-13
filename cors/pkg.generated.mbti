@@ -10,7 +10,7 @@ pub fn append_cors_headers(@crescent.MocketEvent, origin? : String, methods? : S
 
 pub fn append_cors_preflight_headers(@crescent.MocketEvent, origin? : String, methods? : String, allow_headers? : String, credentials? : Bool, max_age? : Int) -> Unit
 
-pub fn handle_cors(origin? : String, methods? : String, allow_headers? : String, expose_headers? : String, credentials? : Bool, max_age? : Int) -> async (@crescent.MocketEvent, async () -> &@crescent.Responder noraise) -> &@crescent.Responder noraise
+pub fn handle_cors(origin? : String, methods? : String, allow_headers? : String, expose_headers? : String, credentials? : Bool, max_age? : Int) -> @crescent.Middleware
 
 pub fn is_preflight_request(@crescent.MocketEvent) -> Bool
 

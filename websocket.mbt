@@ -109,4 +109,4 @@ pub enum WebSocketAggregatedMessage {
 
 ///|
 /// Handler function type for WebSocket route events.
-pub type WebSocketHandler = (WebSocketEvent) -> Unit
+pub(all) struct WebSocketHandler((WebSocketEvent) -> Unit)
