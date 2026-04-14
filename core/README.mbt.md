@@ -88,14 +88,19 @@ decoded key lookup. All three cache their results so repeated calls are free.
 ///|
 test "query parameters are percent-decoded" {
   let req = @core.HttpRequest(
-    Get,
-    "/search?q=hello%20world&lang=en",
-    {},
-    raw_body=b"",
+      Get,
+      "/search?q=hello%20world&lang=en",
+      {},
+      raw_body=b"",
+    )
+    |> x => { (x.get_query("q"), x.get_query("lang"), x.get_query("missing")) }
+  debug_inspect(
+    req,
+    content=(
+      #|(Some("hello world"), Some("en"), None)
+    ),
   )
-  assert_eq(req.get_query("q"), Some("hello world"))
-  assert_eq(req.get_query("lang"), Some("en"))
-  assert_eq(req.get_query("missing"), None)
+
 }
 ```
 
@@ -119,7 +124,12 @@ test "read body as string" {
 test "read body as JSON" {
   let req = @core.HttpRequest(Post, "/", {}, raw_body=b"{\"name\":\"Alice\"}")
   let body : Json = req.body()
-  inspect(body, content="Object({\"name\": String(\"Alice\")})")
+  debug_inspect(
+    body,
+    content=(
+      #|Object({ "name": String("Alice") })
+    ),
+  )
 }
 ```
 
@@ -145,8 +155,12 @@ test "json shorthand parses typed value" {
     raw_body=b"{\"name\":\"Bob\",\"age\":30}",
   )
   let user : CoreDocUser = req.json()
-  assert_eq(user.name, "Bob")
-  assert_eq(user.age, 30)
+  debug_inspect(
+    user,
+    content=(
+      #|{ name: "Bob", age: 30 }
+    ),
+  )
 }
 ```
 
@@ -233,8 +247,17 @@ test "json response sets content type and body" {
 ///|
 test "redirect helpers" {
   let r301 = @core.HttpResponse::redirect("/new")
-  assert_eq(r301.status_code, MovedPermanently)
-  inspect(r301.headers.get("Location"), content="Some(\"/new\")")
+  debug_inspect(
+    r301,
+    content=(
+      #|{
+      #|  status_code: MovedPermanently,
+      #|  headers: { "Location": "/new" },
+      #|  cookies: {},
+      #|  raw_body: ...,
+      #|}
+    ),
+  )
 
   let r302 = @core.HttpResponse::redirect_temporary("/temp")
   assert_eq(r302.status_code, Found)
@@ -324,22 +347,22 @@ The `Responder` trait is the adapter between any MoonBit value and an HTTP
 response body. Handlers return `&Responder`, and the framework calls three
 methods on it:
 
-| Method | Purpose |
-| ------ | ------- |
-| `options(res)` | Set status code and headers (e.g. Content-Type) on the response |
-| `output(buf)` | Write the body bytes into a buffer |
-| `output_bytes()` | Return pre-encoded bytes directly (fast path, avoids a copy) |
+| Method           | Purpose                                                         |
+| ---------------- | --------------------------------------------------------------- |
+| `options(res)`   | Set status code and headers (e.g. Content-Type) on the response |
+| `output(buf)`    | Write the body bytes into a buffer                              |
+| `output_bytes()` | Return pre-encoded bytes directly (fast path, avoids a copy)    |
 
 Built-in implementations:
 
-| Type | Content-Type |
-| ---- | ------------ |
-| `String` / `StringView` | `text/plain; charset=utf-8` |
-| `Json` / `&ToJson` | `application/json; charset=utf-8` |
-| `Bytes` | `application/octet-stream` |
-| `HttpResponse` | Copies status, merges headers, forwards body |
-| `HttpRequest` | Merges headers, forwards body (useful for proxying) |
-| `Html` (via `html()`) | `text/html; charset=utf-8` |
+| Type                    | Content-Type                                        |
+| ----------------------- | --------------------------------------------------- |
+| `String` / `StringView` | `text/plain; charset=utf-8`                         |
+| `Json` / `&ToJson`      | `application/json; charset=utf-8`                   |
+| `Bytes`                 | `application/octet-stream`                          |
+| `HttpResponse`          | Copies status, merges headers, forwards body        |
+| `HttpRequest`           | Merges headers, forwards body (useful for proxying) |
+| `Html` (via `html()`)   | `text/html; charset=utf-8`                          |
 
 ### String as a responder
 
@@ -386,13 +409,13 @@ The `BodyReader` trait powers typed body deserialization for both requests and
 responses. Implement it for your own types to enable `req.body[MyType]()` and
 `res.read_body[MyType]()`:
 
-| Type | Behavior |
-| ---- | -------- |
-| `String` | UTF-8 decode (raises on invalid bytes) |
-| `Json` | Parse as JSON value |
-| `Bytes` | Return raw bytes as-is |
-| `FixedArray[Byte]` | Convert to fixed-size byte array |
-| `Array[Byte]` | Convert to resizable byte array |
+| Type               | Behavior                               |
+| ------------------ | -------------------------------------- |
+| `String`           | UTF-8 decode (raises on invalid bytes) |
+| `Json`             | Parse as JSON value                    |
+| `Bytes`            | Return raw bytes as-is                 |
+| `FixedArray[Byte]` | Convert to fixed-size byte array       |
+| `Array[Byte]`      | Convert to resizable byte array        |
 
 ```mbt check
 ///|
