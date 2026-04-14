@@ -30,7 +30,7 @@ pub(all) enum HttpMethod {
   Trace
   Connect
   Other(String)
-} derive(Eq)
+} derive(Eq, @debug.Debug)
 pub fn HttpMethod::from_string(String) -> Self
 pub fn HttpMethod::to_method_string(Self) -> String
 pub impl Show for HttpMethod
@@ -43,7 +43,7 @@ pub(all) struct HttpRequest {
   // private fields
 
   fn new(HttpMethod, String, Map[String, String], raw_body? : Bytes) -> HttpRequest
-}
+} derive(@debug.Debug)
 pub fn[T : BodyReader] HttpRequest::body(Self) -> T raise
 pub fn HttpRequest::content_type(Self) -> String?
 pub fn HttpRequest::from_method_string(String, String, Map[String, String], Bytes) -> Self

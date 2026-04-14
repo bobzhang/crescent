@@ -21,7 +21,7 @@ pub(all) struct HttpRequest {
     headers : Map[String, String],
     raw_body? : Bytes,
   ) -> HttpRequest
-}
+} derive(Debug(ignore=Bytes))
 
 ///|
 /// Creates a new `HttpRequest` with the given method, URL, headers, and optional body.

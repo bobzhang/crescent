@@ -58,6 +58,19 @@ test "construct and inspect a request" {
     { "Authorization": "Bearer token" },
     raw_body=b"",
   )
+  debug_inspect(
+    req,
+    content=(
+      #|{
+      #|  http_method: Get,
+      #|  url: "/users?page=2",
+      #|  headers: { "Authorization": "Bearer token" },
+      #|  raw_body: ...,
+      #|  cached_path: None,
+      #|  cached_query_params: None,
+      #|}
+    ),
+  )
   assert_eq(req.path(), "/users")
   assert_eq(req.query_string(), Some("page=2"))
   assert_eq(req.get_query("page"), Some("2"))
@@ -121,7 +134,7 @@ test "read body as JSON" {
 struct CoreDocUser {
   name : String
   age : Int
-} derive(FromJson, Eq, Show, Debug)
+} derive(FromJson, Eq, Debug)
 
 ///|
 test "json shorthand parses typed value" {
@@ -132,7 +145,8 @@ test "json shorthand parses typed value" {
     raw_body=b"{\"name\":\"Bob\",\"age\":30}",
   )
   let user : CoreDocUser = req.json()
-  assert_eq(user, { name: "Bob", age: 30 })
+  assert_eq(user.name, "Bob")
+  assert_eq(user.age, 30)
 }
 ```
 
@@ -281,11 +295,12 @@ on it directly -- no need to compare raw integers:
 ```mbt check
 ///|
 test "status code round-trips through integer" {
-  assert_eq(@core.StatusCode::from_int(200), @core.OK)
-  assert_eq(@core.StatusCode::from_int(404), @core.NotFound)
-  assert_eq(@core.OK.to_int(), 200)
+  assert_eq(@core.StatusCode::from_int(200), OK)
+  assert_eq(@core.StatusCode::from_int(404), NotFound)
+  let ok : @core.StatusCode = OK
+  assert_eq(ok.to_int(), 200)
   // Unknown codes become Custom
-  assert_eq(@core.StatusCode::from_int(599), @core.Custom(599))
+  assert_eq(@core.StatusCode::from_int(599), Custom(599))
 }
 ```
 
@@ -294,8 +309,9 @@ test "status code round-trips through integer" {
 ```mbt check
 ///|
 test "method round-trips through string" {
-  assert_eq(@core.HttpMethod::from_string("GET"), @core.Get)
-  assert_eq(@core.Get.to_method_string(), "GET")
+  assert_eq(@core.HttpMethod::from_string("GET"), Get)
+  let get : @core.HttpMethod = Get
+  assert_eq(get.to_method_string(), "GET")
   // Unknown methods use Other
   let custom = @core.HttpMethod::from_string("PURGE")
   assert_eq(custom.to_method_string(), "PURGE")

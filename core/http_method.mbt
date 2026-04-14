@@ -15,7 +15,7 @@ pub(all) enum HttpMethod {
   Connect
   /// For wildcard routing and non-standard methods
   Other(String)
-} derive(Eq)
+} derive(Eq, Debug)
 
 ///|
 pub impl Show for HttpMethod with output(self, logger) {
