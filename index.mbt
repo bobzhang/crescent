@@ -77,12 +77,13 @@ pub fn Mocket::on(
     if self.static_routes.get(event) is Some(method_routes) {
       method_routes.set(path, handler)
     } else {
-      let new_routes : Map[String, HttpHandler] = Map::new()
-      new_routes.set(path, handler)
+      let new_routes : Map[String, HttpHandler] = Map::from_array([
+        (path, handler),
+      ])
       self.static_routes.set(event, new_routes)
     }
-    // Dynamic path: compile and insert into radix tree
   } else {
+    // Dynamic path: compile and insert into radix tree
     let compiled = @router.CompiledRoute(path)
     self.dynamic_routes.insert(event, compiled, handler)
   }
@@ -200,17 +201,14 @@ pub fn Mocket::group(
   // Merge route keys for introspection
   self.route_keys.append(group.route_keys)
   // Merge static route tables
-  group.static_routes
-  .iter()
-  .each(i => {
-    let http_method = i.0
-    let group_routes = i.1
+  for i in group.static_routes {
+    let (http_method, group_routes) = i
     match self.static_routes.get(http_method) {
       Some(existing_routes) =>
         group_routes.iter().each(route => existing_routes.set(route.0, route.1))
       None => self.static_routes.set(http_method, group_routes)
     }
-  })
+  }
   // Merge dynamic routes (radix tree)
   self.dynamic_routes.merge(group.dynamic_routes)
   group.ws_static_routes.iter().each(i => self.ws_static_routes.set(i.0, i.1))

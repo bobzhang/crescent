@@ -974,7 +974,7 @@ pub async fn Mocket::serve(
   let _ = resolve_native_websocket_overflow_policy(options)
   let _ = resolve_native_websocket_read_timeout_ms(options)
   let addr = @socket.Addr::parse("0.0.0.0:\{port}")
-  let server = @http.Server::new(addr, reuse_addr=true)
+  let server = @http.Server(addr, reuse_addr=true)
   self.serve_on(server, options~)
 }
 
@@ -1014,6 +1014,6 @@ pub async fn Mocket::serve_until(
   let _ = resolve_native_websocket_overflow_policy(options)
   let _ = resolve_native_websocket_read_timeout_ms(options)
   let addr = @socket.Addr::parse("0.0.0.0:\{port}")
-  let server = @http.Server::new(addr, reuse_addr=true)
+  let server = @http.Server(addr, reuse_addr=true)
   self.serve_on_until(server, shutdown, options~)
 }
