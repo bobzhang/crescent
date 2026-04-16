@@ -71,7 +71,7 @@ test "parse_multipart" {
       #|Some("value1")
     ),
   )
-  inspect(field1.bind(fn(v) { v.filename }), content="None")
+  inspect(field1.bind(v => v.filename), content="None")
   let field2 = first_multipart_value(parts, "field2")
   inspect(
     field2.map(v => @utf8.decode(v.data) catch { _ => "" }),

@@ -1,7 +1,7 @@
 ///|
 /// Sends an HTTP request using the method, URL, headers, and body from the given
 /// `HttpRequest` object, and returns the response.
-pub async fn request(req : @core.HttpRequest) -> @core.HttpResponse raise {
+pub async fn request(req : @core.HttpRequest) -> @core.HttpResponse {
   let http_method = req.http_method
   if req.raw_body.length() == 0 {
     fetch(req.url, http_method, headers=req.headers)
@@ -20,7 +20,7 @@ pub async fn get(
   headers? : Map[String, String],
   credentials? : FetchCredentials,
   mode? : FetchMode,
-) -> @core.HttpResponse raise {
+) -> @core.HttpResponse {
   fetch(url, Get, data?, headers?, credentials?, mode?)
 }
 
@@ -33,7 +33,7 @@ pub async fn delete(
   headers? : Map[String, String],
   credentials? : FetchCredentials,
   mode? : FetchMode,
-) -> @core.HttpResponse raise {
+) -> @core.HttpResponse {
   fetch(url, Delete, data?, headers?, credentials?, mode?)
 }
 
@@ -46,7 +46,7 @@ pub async fn head(
   headers? : Map[String, String],
   credentials? : FetchCredentials,
   mode? : FetchMode,
-) -> @core.HttpResponse raise {
+) -> @core.HttpResponse {
   fetch(url, Head, data?, headers?, credentials?, mode?)
 }
 
@@ -59,7 +59,7 @@ pub async fn options(
   headers? : Map[String, String],
   credentials? : FetchCredentials,
   mode? : FetchMode,
-) -> @core.HttpResponse raise {
+) -> @core.HttpResponse {
   fetch(url, Options, data?, headers?, credentials?, mode?)
 }
 
@@ -72,7 +72,7 @@ pub async fn trace(
   headers? : Map[String, String],
   credentials? : FetchCredentials,
   mode? : FetchMode,
-) -> @core.HttpResponse raise {
+) -> @core.HttpResponse {
   fetch(url, Trace, data?, headers?, credentials?, mode?)
 }
 
@@ -85,7 +85,7 @@ pub async fn connect(
   headers? : Map[String, String],
   credentials? : FetchCredentials,
   mode? : FetchMode,
-) -> @core.HttpResponse raise {
+) -> @core.HttpResponse {
   fetch(url, Connect, data?, headers?, credentials?, mode?)
 }
 
@@ -98,7 +98,7 @@ pub async fn post(
   headers? : Map[String, String],
   credentials? : FetchCredentials,
   mode? : FetchMode,
-) -> @core.HttpResponse raise {
+) -> @core.HttpResponse {
   fetch(url, Post, data?, headers?, credentials?, mode?)
 }
 
@@ -111,7 +111,7 @@ pub async fn put(
   headers? : Map[String, String],
   credentials? : FetchCredentials,
   mode? : FetchMode,
-) -> @core.HttpResponse raise {
+) -> @core.HttpResponse {
   fetch(url, Put, data?, headers?, credentials?, mode?)
 }
 
@@ -124,6 +124,6 @@ pub async fn patch(
   headers? : Map[String, String],
   credentials? : FetchCredentials,
   mode? : FetchMode,
-) -> @core.HttpResponse raise {
+) -> @core.HttpResponse {
   fetch(url, Patch, data?, headers?, credentials?, mode?)
 }

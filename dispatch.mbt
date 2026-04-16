@@ -47,9 +47,13 @@ pub async fn Mocket::dispatch(
   // materialized body (unless the handler already set it), THEN drop the
   // body. TestClient callers can still assert on Content-Length.
   let body = if http_method == "HEAD" {
-    if !@httputil.has_header_case_insensitive(event.res.headers, "Content-Length") {
+    if !@httputil.has_header_case_insensitive(
+        event.res.headers,
+        "Content-Length",
+      ) {
       event.res.headers.set(
-        "Content-Length", event.res.raw_body.length().to_string(),
+        "Content-Length",
+        event.res.raw_body.length().to_string(),
       )
     }
     b""

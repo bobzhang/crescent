@@ -249,21 +249,21 @@ fn Mocket::find_ws_route(
 ///|
 test "find_ws_route static hit" {
   let app = Mocket()
-  app.ws("/ws", fn(_event) {  })
+  app.ws("/ws", _ => ())
   inspect(app.find_ws_route("/ws") is Some(_), content="true")
 }
 
 ///|
 test "find_ws_route dynamic hit" {
   let app = Mocket()
-  app.ws("/ws/:room", fn(_event) {  })
+  app.ws("/ws/:room", _ => ())
   inspect(app.find_ws_route("/ws/lobby") is Some(_), content="true")
 }
 
 ///|
 test "find_ws_route extracts params from dynamic path" {
   let app = Mocket()
-  app.ws("/ws/:room", fn(_event) {  })
+  app.ws("/ws/:room", _ => ())
   guard app.find_ws_route("/ws/lobby") is Some((_, { "room": "lobby", .. })) else {
     fail("expected route match")
   }
@@ -272,7 +272,7 @@ test "find_ws_route extracts params from dynamic path" {
 ///|
 test "find_ws_route extracts multiple params" {
   let app = Mocket()
-  app.ws("/ws/:room/user/:id", fn(_event) {  })
+  app.ws("/ws/:room/user/:id", _ => ())
   guard app.find_ws_route("/ws/lobby/user/42")
     is Some((_, { "room": "lobby", "id": "42", .. })) else {
     fail("expected route match")
@@ -282,7 +282,7 @@ test "find_ws_route extracts multiple params" {
 ///|
 test "find_ws_route static returns empty params" {
   let app = Mocket()
-  app.ws("/ws", fn(_event) {  })
+  app.ws("/ws", _ => ())
   guard app.find_ws_route("/ws") is Some((_, params)) && params.is_empty() else {
     fail("expected route match with empty params")
   }
@@ -295,8 +295,8 @@ test "find_ws_route duplicate path overrides handler" {
   // Now re-registration overrides the previous handler.
   let calls : Array[String] = []
   let app = Mocket()
-  app.ws("/ws/:room", fn(_event) { calls.push("first") })
-  app.ws("/ws/:room", fn(_event) { calls.push("second") })
+  app.ws("/ws/:room", _ => calls.push("first"))
+  app.ws("/ws/:room", _ => calls.push("second"))
   guard app.find_ws_route("/ws/lobby") is Some((handler, _)) else {
     fail("expected route match")
   }
@@ -310,8 +310,8 @@ test "find_ws_route static beats param" {
   // route, the static route wins regardless of registration order.
   let calls : Array[String] = []
   let app = Mocket()
-  app.ws("/ws/:room", fn(_event) { calls.push("param") })
-  app.ws("/ws/lobby", fn(_event) { calls.push("static") })
+  app.ws("/ws/:room", _ => calls.push("param"))
+  app.ws("/ws/lobby", _ => calls.push("static"))
   guard app.find_ws_route("/ws/lobby") is Some((handler, _)) else {
     fail("expected route match")
   }
@@ -325,8 +325,8 @@ test "find_ws_route param beats wildcard" {
   // :name should be preferred over * for the same position
   let calls : Array[String] = []
   let app = Mocket()
-  app.ws("/ws/*", fn(_event) { calls.push("wildcard") })
-  app.ws("/ws/:room", fn(_event) { calls.push("param") })
+  app.ws("/ws/*", _ => calls.push("wildcard"))
+  app.ws("/ws/:room", _ => calls.push("param"))
   guard app.find_ws_route("/ws/lobby") is Some((handler, _)) else {
     fail("expected route match")
   }
@@ -337,6 +337,6 @@ test "find_ws_route param beats wildcard" {
 ///|
 test "find_ws_route miss" {
   let app = Mocket()
-  app.ws("/ws", fn(_event) {  })
+  app.ws("/ws", _ => ())
   inspect(app.find_ws_route("/other") is Some(_), content="false")
 }

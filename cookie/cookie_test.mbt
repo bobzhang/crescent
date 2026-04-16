@@ -21,9 +21,9 @@ test "CookieItem::to_string" {
 test "parse_cookie" {
   let cookie_str = "name=value; name2=value2; name3=value3"
   let cookies = parse_cookie(cookie_str)
-  assert_eq(cookies.get("name").map(fn(i) { i.value }), Some("value"))
-  assert_eq(cookies.get("name2").map(fn(i) { i.value }), Some("value2"))
-  assert_eq(cookies.get("name3").map(fn(i) { i.value }), Some("value3"))
+  assert_eq(cookies.get("name").map(i => i.value), Some("value"))
+  assert_eq(cookies.get("name2").map(i => i.value), Some("value2"))
+  assert_eq(cookies.get("name3").map(i => i.value), Some("value3"))
 }
 
 ///|
@@ -61,8 +61,8 @@ test "parse_cookie_multiple_with_attributes" {
 test "parse_cookie_with_spaces" {
   let cookie_str = " name = value ; name2= value2 "
   let cookies = parse_cookie(cookie_str)
-  assert_eq(cookies.get("name").map(fn(i) { i.value }), Some("value"))
-  assert_eq(cookies.get("name2").map(fn(i) { i.value }), Some("value2"))
+  assert_eq(cookies.get("name").map(i => i.value), Some("value"))
+  assert_eq(cookies.get("name2").map(i => i.value), Some("value2"))
 }
 
 ///|
@@ -70,26 +70,26 @@ test "parse_cookie_quoted" {
   let cookie_str = "name=\"value with spaces\"; name2=\"value2\""
   let cookies = parse_cookie(cookie_str)
   assert_eq(
-    cookies.get("name").map(fn(i) { i.value }),
+    cookies.get("name").map(i => i.value),
     Some("value with spaces"),
   )
-  assert_eq(cookies.get("name2").map(fn(i) { i.value }), Some("value2"))
+  assert_eq(cookies.get("name2").map(i => i.value), Some("value2"))
 }
 
 ///|
 test "parse_cookie_empty_value" {
   let cookie_str = "name=; name2="
   let cookies = parse_cookie(cookie_str)
-  assert_eq(cookies.get("name").map(fn(i) { i.value }), Some(""))
-  assert_eq(cookies.get("name2").map(fn(i) { i.value }), Some(""))
+  assert_eq(cookies.get("name").map(i => i.value), Some(""))
+  assert_eq(cookies.get("name2").map(i => i.value), Some(""))
 }
 
 ///|
 test "parse_cookie_no_value" {
   let cookie_str = "name; name2"
   let cookies = parse_cookie(cookie_str)
-  assert_eq(cookies.get("name").map(fn(i) { i.value }), Some(""))
-  assert_eq(cookies.get("name2").map(fn(i) { i.value }), Some(""))
+  assert_eq(cookies.get("name").map(i => i.value), Some(""))
+  assert_eq(cookies.get("name2").map(i => i.value), Some(""))
 }
 
 ///|
@@ -97,12 +97,12 @@ test "parse_complex_cookie_string" {
   let cookie_str = "__stripe_mid=4e192e8c-7c22-4923-aaf1-6b174a77a43555136e; JSESSIONID=5C63BF22946D333F1079A0150ECABBCB; session_id=12345"
   let cookies = parse_cookie(cookie_str)
   assert_eq(
-    cookies.get("__stripe_mid").map(fn(i) { i.value }),
+    cookies.get("__stripe_mid").map(i => i.value),
     Some("4e192e8c-7c22-4923-aaf1-6b174a77a43555136e"),
   )
-  assert_eq(cookies.get("session_id").map(fn(i) { i.value }), Some("12345"))
+  assert_eq(cookies.get("session_id").map(i => i.value), Some("12345"))
   assert_eq(
-    cookies.get("JSESSIONID").map(fn(i) { i.value }),
+    cookies.get("JSESSIONID").map(i => i.value),
     Some("5C63BF22946D333F1079A0150ECABBCB"),
   )
 }

@@ -263,7 +263,7 @@ pub async fn fetch(
   headers? : Map[String, String],
   credentials? : FetchCredentials,
   mode? : FetchMode,
-) -> @core.HttpResponse raise {
+) -> @core.HttpResponse {
   ignore(credentials)
   ignore(mode)
   let (req_body, req_headers) = prepare_fetch_payload_bytes(body, data, headers)

@@ -203,6 +203,6 @@ pub fn merge_headers_case_insensitive(
 /// Returns a shallow copy of the headers map.
 pub fn copy_headers(headers : Map[String, String]) -> Map[String, String] {
   let out : Map[String, String] = {}
-  headers.each(fn(k, v) { out.set(k, v) })
+  headers.each((k, v) => out.set(k, v))
   out
 }

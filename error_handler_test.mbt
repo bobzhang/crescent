@@ -16,7 +16,7 @@ test "not found handler defaults to none" {
 ///|
 test "group merges not found handler" {
   let app = @crescent.Mocket()
-  app.group("/api", fn(group) {
+  app.group("/api", group => {
     group.set_not_found_handler(_ => {
       @crescent.HttpResponse(status_code=NotFound).body("API 404")
     })

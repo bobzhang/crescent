@@ -37,7 +37,7 @@ fn wrap_error_handler(
 
 ///|
 async test "wrap_error_handler passes through success" {
-  let handler = wrap_error_handler(fn(_event) { "ok" })
+  let handler = wrap_error_handler(_ => "ok")
   let event = MocketEvent::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
@@ -72,7 +72,7 @@ async test "wrap_error_handler catches HttpError" {
 ///|
 async test "wrap_error_handler catches JsonDecodeError as 400" {
   let handler = wrap_error_handler(event => {
-    let _user : Json = event.req.json()
+    let _ : Json = event.req.json()
     "ok"
   })
   let event = MocketEvent::{

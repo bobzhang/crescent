@@ -371,7 +371,7 @@ fn parse_segment(
 
 ///|
 /// Continuation-based completion functions
-fn parse_done(source : StringView, _uri : Uri) -> StringView {
+fn parse_done(source : StringView, _ : Uri) -> StringView {
   source
 }
 

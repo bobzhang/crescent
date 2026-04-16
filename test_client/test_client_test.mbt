@@ -4,8 +4,11 @@ async test "test client GET returns text" {
   app.get("/hello", _ => "Hello!")
   let client = @test_client.TestClient(app)
   let res = client.get("/hello")
-  assert_eq(res.status, OK)
-  assert_eq(res.body_text(), "Hello!")
+  guard (res.status, res.body_text()) is (OK, "Hello!") else {
+    fail(
+      "Expected 200 OK with body 'Hello!', got status \{res.status} and body '\{res.body_text()}'",
+    )
+  }
 }
 
 ///|
@@ -71,24 +74,24 @@ async test "test client runs middleware" {
   // bobzhang/crescent/middleware — this test verifies that @test_client.TestClient
   // dispatches requests through the middleware chain, not that any
   // particular middleware behaves correctly.
-  let ran : Ref[Bool] = Ref::new(false)
+  let mut ran = false
   let app = @crescent.Mocket()
   app.use_middleware((_event, next) => {
-    ran.val = true
+    ran = true
     next()
   })
   app.get("/test", _ => "ok")
   let client = @test_client.TestClient(app)
   let res = client.get("/test")
   assert_eq(res.status, OK)
-  assert_eq(ran.val, true)
+  assert_eq(ran, true)
 }
 
 ///|
 async test "test client with error handling handler" {
   let app = @crescent.Mocket()
   app.post("/users", event => {
-    let _body : Json = event.req.json()
+    let _ : Json = event.req.json()
     "created"
   })
   let client = @test_client.TestClient(app)
@@ -142,7 +145,7 @@ async test "test client with path-scoped middleware" {
   let order : Array[String] = []
   let app = @crescent.Mocket()
   app.use_middleware(
-    (_event, next) => {
+    (_, next) => {
       order.push("api-mw")
       next()
     },

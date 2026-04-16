@@ -42,10 +42,8 @@ test "header() is case-insensitive" {
     .header("Content-Type", "text/html")
   // Only one entry should exist (replaced, not duplicated)
   let mut count = 0
-  res.headers.each(fn(k, _v) {
-    if k.to_lower() == "content-type" {
-      count = count + 1
-    }
+  res.headers.each((k, _) => if k.to_lower() == "content-type" {
+    count = count + 1
   })
   assert_eq(count, 1)
 }
