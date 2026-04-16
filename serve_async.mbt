@@ -200,7 +200,7 @@ test "header_contains_token_case_insensitive returns false for missing header" {
 }
 
 ///|
-fn is_websocket_upgrade_request(request : @http.Request) -> Bool {
+fn @http.Request::is_websocket_upgrade_request(request : Self) -> Bool {
   let has_connection_upgrade = header_contains_token_case_insensitive(
     request.headers,
     "connection",
@@ -221,7 +221,7 @@ test "is_websocket_upgrade_request returns true with both headers" {
     path: "/",
     headers: { "Connection": "upgrade", "Upgrade": "websocket" },
   }
-  inspect(is_websocket_upgrade_request(request), content="true")
+  inspect(request.is_websocket_upgrade_request(), content="true")
 }
 
 ///|
@@ -231,7 +231,7 @@ test "is_websocket_upgrade_request returns false without Connection header" {
     path: "/",
     headers: { "Upgrade": "websocket" },
   }
-  inspect(is_websocket_upgrade_request(request), content="false")
+  inspect(request.is_websocket_upgrade_request(), content="false")
 }
 
 ///|
@@ -241,13 +241,13 @@ test "is_websocket_upgrade_request returns false without Upgrade header" {
     path: "/",
     headers: { "Connection": "upgrade" },
   }
-  inspect(is_websocket_upgrade_request(request), content="false")
+  inspect(request.is_websocket_upgrade_request(), content="false")
 }
 
 ///|
 test "is_websocket_upgrade_request returns false with empty headers" {
   let request : @http.Request = { meth: Get, path: "/", headers: {} }
-  inspect(is_websocket_upgrade_request(request), content="false")
+  inspect(request.is_websocket_upgrade_request(), content="false")
 }
 
 ///|
@@ -263,7 +263,7 @@ fn looks_like_websocket_handshake_request(request : @http.Request) -> Bool {
       return true
     }
   }
-  is_websocket_upgrade_request(request) || websocket_upgrade_header
+  request.is_websocket_upgrade_request() || websocket_upgrade_header
 }
 
 ///|
@@ -635,6 +635,40 @@ async fn read_request_body_with_policy_async(
 }
 
 ///|
+/// Dispatches one inbound HTTP request through the Mocket pipeline.
+///
+/// Called per-request by `run_native_server` (and by the graceful-shutdown
+/// accept loop in `serve_on`). Runs to completion once per request: this
+/// function does not itself loop, keep-alive reuse is driven by the caller.
+///
+/// Pipeline phases, in order:
+///
+///   1. **WebSocket dispatch.** If the request looks like a WS handshake AND
+///      a matching `ws` route exists, hand off to `handle_websocket_route_async`
+///      and return (the response is sent inside the WS handler). A strict
+///      upgrade request with no matching route yields `404`. A non-strict
+///      lookalike with no match falls through to the HTTP pipeline.
+///   2. **Body reading.** Skipped entirely for bodyless methods
+///      (GET/HEAD/DELETE/OPTIONS/TRACE) unless Content-Length > 0 or
+///      Transfer-Encoding: chunked — chunked bodies MUST still be consumed
+///      to keep the keep-alive stream in sync. Otherwise reads up to
+///      `max_request_body_bytes` with `request_body_read_timeout_ms`; on
+///      violation the helper sends `413` or `408` and we return early.
+///   3. **Route lookup.** `lookup_http_route` returns one of:
+///      `Found` (normal), `MethodNotAllowed` (synthesize 405),
+///      `Options` (synthesize 204 + Allow for CORS-style preflight), or
+///      `NotFound` (user's `not_found_handler` if set, else default 404).
+///   4. **Handler + middleware execution.** Run the onion chain, optionally
+///      wrapped in `with_timeout_opt(handler_timeout_ms)`. The timeout covers
+///      handler execution only, NOT response transmission — otherwise a late
+///      timeout could tear down a partially-sent response and corrupt the
+///      keep-alive framing. A timed-out handler yields `504 Gateway Timeout`.
+///   5. **Response transmission.** `send_response_async` finalizes headers
+///      (cookies, Date) and writes to the socket.
+///
+/// The function does not raise; transport/IO errors surface through
+/// `send_response_async`'s early returns and are caught by the keep-alive
+/// loop in `serve_on` (which closes the connection on error).
 async fn Mocket::handle_request(
   self : Mocket,
   ws_runtime_id : String,
@@ -643,9 +677,18 @@ async fn Mocket::handle_request(
   conn : @http.ServerConnection,
   options : NativeServeOptions,
 ) -> Unit {
+  // Target is the path *without* query string; query-string parsing happens
+  // lazily inside the handler via MocketEvent helpers.
   let request_path = @httputil.request_target_path(request.path)
-  let strict_websocket_upgrade = is_websocket_upgrade_request(request)
-  // Skip expensive WebSocket handshake inspection when no WS routes exist
+
+  // -------------------------------------------------------------------------
+  // Phase 1: WebSocket upgrade dispatch
+  // -------------------------------------------------------------------------
+  // Two-tier detection: a "strict" check that the upgrade headers are
+  // well-formed, and a cheaper "looks-like" heuristic. We only run the
+  // heuristic when the app actually has WS routes registered — otherwise
+  // every HTTP request would pay for handshake inspection.
+  let strict_websocket_upgrade = request.is_websocket_upgrade_request()
   let has_ws_routes = !self.ws_static_routes.is_empty() ||
     !self.ws_dynamic_routes.is_empty()
   let websocket_like_request = if strict_websocket_upgrade {
@@ -656,6 +699,8 @@ async fn Mocket::handle_request(
     false
   }
   if websocket_like_request {
+    // Resolve WS option defaults here (not in the handler) so per-connection
+    // settings are captured once before entering the peer loop.
     let websocket_max_message_bytes = options.websocket_max_message_bytes
     let websocket_outgoing_queue_capacity = options.websocket_outgoing_queue_capacity.unwrap_or(
       DEFAULT_NATIVE_WS_OUTGOING_QUEUE_CAPACITY,
@@ -666,7 +711,8 @@ async fn Mocket::handle_request(
     let websocket_read_timeout_ms = options.websocket_read_timeout_ms
     match self.find_ws_route(request_path) {
       Some((ws_handler, route_params)) => {
-        // Convert StringView params to owned Strings for the peer
+        // Copy StringView params into owned Strings: the peer outlives the
+        // request buffer, so borrowed views would dangle.
         let ws_params : Map[String, String] = {}
         route_params.each((k, v) => ws_params.set(k, v.to_string()))
         handle_websocket_route_async(
@@ -675,18 +721,27 @@ async fn Mocket::handle_request(
         )
         return
       }
+      // Strict upgrade with no matching route: client asked for WS explicitly,
+      // we refuse with 404 (and connection close, inside send_not_found_async).
       None if strict_websocket_upgrade => {
         send_not_found_async(request, conn)
         return
       }
+      // Non-strict lookalike with no match: treat as a plain HTTP request,
+      // fall through to the normal pipeline below.
       None => ()
     }
   }
+
+  // -------------------------------------------------------------------------
+  // Phase 2: Request body reading
+  // -------------------------------------------------------------------------
   let http_method_text = request_method_to_string(request.meth)
-  // Skip body reading for methods that typically have no body, UNLESS
-  // - Content-Length > 0, or
-  // - Transfer-Encoding: chunked is set (chunked requests must still be
-  //   consumed to avoid desyncing keep-alive connections)
+  // Skip body reading for methods that typically have no body, UNLESS:
+  //   - Content-Length > 0 (client explicitly sent a body), or
+  //   - Transfer-Encoding: chunked (chunked bodies MUST be consumed, even
+  //     on GET/HEAD/etc., or the next request on this keep-alive connection
+  //     will parse the chunk trailer as a new request line).
   let has_content_length = request_content_length(request) is Some(len) &&
     len > 0
   let is_chunked = header_contains_token_case_insensitive(
@@ -701,6 +756,8 @@ async fn Mocket::handle_request(
   } else {
     let max_request_body_bytes = options.max_request_body_bytes
     let request_body_read_timeout_ms = options.request_body_read_timeout_ms
+    // read_request_body_with_policy_async handles both limits and sends the
+    // appropriate 413/408 response itself; we just early-return if rejected.
     match
       read_request_body_with_policy_async(
         request, body_reader, conn, max_request_body_bytes, request_body_read_timeout_ms,
@@ -709,6 +766,15 @@ async fn Mocket::handle_request(
       RequestRejected => return
     }
   }
+
+  // -------------------------------------------------------------------------
+  // Phase 3: Route lookup
+  // -------------------------------------------------------------------------
+  // lookup_http_route distinguishes four outcomes. Only `Found` uses the
+  // user's handler; the others synthesize framework-level responses:
+  //   - MethodNotAllowed: path matches *some* method, but not this one (405)
+  //   - Options: CORS-style preflight — synthesize 204 + Allow header
+  //   - NotFound: no path match — prefer user's not_found_handler if set
   let (params, handler) = match
     self.lookup_http_route(http_method_text, request_path) {
     Found(matched_handler, matched_params) => (matched_params, matched_handler)
@@ -720,6 +786,12 @@ async fn Mocket::handle_request(
         None => ({}, handle_not_found())
       }
   }
+
+  // -------------------------------------------------------------------------
+  // Phase 4: Handler execution (with optional timeout)
+  // -------------------------------------------------------------------------
+  // Build the user-facing event. `res` starts as 200 OK; the handler mutates
+  // it (status_code, headers, cookies) and returns a Responder for the body.
   let event = {
     req: HttpRequest::from_method_string(
       http_method_text,
@@ -732,8 +804,11 @@ async fn Mocket::handle_request(
   }
   match options.handler_timeout_ms {
     Some(timeout_ms) =>
-      // Timeout wraps only handler execution, not response transmission.
-      // This prevents corrupting an in-flight HTTP response if the timeout fires.
+      // IMPORTANT: the timeout wraps only the handler+middleware chain, not
+      // send_response_async. If transmission were inside the timeout and the
+      // timeout fired mid-write, we'd leave a truncated response on the wire
+      // and desync the keep-alive stream. Timing out strictly before any
+      // bytes are sent lets us fall back to a clean 504 response.
       match
         @async.with_timeout_opt(timeout_ms, () => {
           execute_middlewares(self.middlewares, event, handler)
@@ -743,6 +818,7 @@ async fn Mocket::handle_request(
         None => send_gateway_timeout_async(request, conn)
       }
     None => {
+      // No timeout: run handler, then transmit. Phase 5 happens inline here.
       let responder = execute_middlewares(self.middlewares, event, handler)
       send_response_async(request, conn, event.res, responder)
     }
