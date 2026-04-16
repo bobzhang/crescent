@@ -59,7 +59,7 @@ pub struct NativeServeOptions {
     websocket_overflow_policy? : NativeWebSocketOverflowPolicy,
     websocket_read_timeout_ms? : Int,
     websocket_max_message_bytes? : Int,
-  ) -> NativeServeOptions raise Error
+  ) -> NativeServeOptions raise
 }
 
 ///|
@@ -73,7 +73,7 @@ fn NativeServeOptions::new(
   websocket_overflow_policy? : NativeWebSocketOverflowPolicy,
   websocket_read_timeout_ms? : Int,
   websocket_max_message_bytes? : Int,
-) -> NativeServeOptions raise Error {
+) -> NativeServeOptions raise {
   if max_connections is Some(v) {
     guard v > 0 else { raise NativeServeError::InvalidMaxConnections(v) }
   }

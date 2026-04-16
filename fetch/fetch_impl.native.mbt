@@ -23,7 +23,7 @@ fn FetchProtocol::scheme(self : FetchProtocol) -> String {
 ///|
 fn request_method_to_async(
   http_method : @core.HttpMethod,
-) -> @http.RequestMethod raise Error {
+) -> @http.RequestMethod raise {
   match http_method {
     Get => Get
     Post => Post
@@ -43,7 +43,7 @@ fn request_method_to_async(
 ///|
 fn resolve_fetch_url(
   url : String,
-) -> (FetchProtocol, String, Int, String) raise Error {
+) -> (FetchProtocol, String, Int, String) raise {
   // Parse the URL using the proper RFC 3986 parser from the uri package.
   let parsed = @uri.Uri(url) catch {
     _ => raise FetchError::RequestFailed("invalid URL: \{url}")
@@ -263,7 +263,7 @@ pub async fn fetch(
   headers? : Map[String, String],
   credentials? : FetchCredentials,
   mode? : FetchMode,
-) -> @core.HttpResponse raise Error {
+) -> @core.HttpResponse raise {
   ignore(credentials)
   ignore(mode)
   let (req_body, req_headers) = prepare_fetch_payload_bytes(body, data, headers)

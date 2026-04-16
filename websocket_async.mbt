@@ -279,7 +279,7 @@ async fn write_native_ws_outgoing(
 async fn recv_native_ws_message(
   ws : @websocket.Conn,
   read_timeout_ms : Int?,
-) -> @websocket.Message? raise Error {
+) -> @websocket.Message? raise {
   match read_timeout_ms {
     Some(read_timeout_ms) =>
       match @async.with_timeout_opt(read_timeout_ms, () => try? ws.recv()) {
@@ -347,7 +347,7 @@ async fn read_native_ws_message_contents(
   ws : @websocket.Conn,
   message : @websocket.Message,
   max_message_bytes : Int?,
-) -> WebSocketAggregatedMessage? raise Error {
+) -> WebSocketAggregatedMessage? raise {
   match max_message_bytes {
     None =>
       Some(
@@ -427,7 +427,7 @@ async fn handle_websocket_route_async(
   outgoing_queue_capacity : Int,
   overflow_policy : NativeWebSocketOverflowPolicy,
   read_timeout_ms : Int?,
-) -> Unit raise Error {
+) -> Unit raise {
   let ws = try
     @websocket.from_http_server(
       normalize_native_websocket_request(request),
