@@ -39,16 +39,10 @@ pub suberror NetworkError derive(@debug.Debug)
 
 // Types and methods
 pub(all) struct HttpHandler(async (MocketEvent) -> &@core.Responder noraise)
-#deprecated
-pub fn HttpHandler::inner(Self) -> async (MocketEvent) -> &@core.Responder noraise
 
 pub(all) struct Middleware(async (MocketEvent, MiddlewareNext) -> &@core.Responder noraise)
-#deprecated
-pub fn Middleware::inner(Self) -> async (MocketEvent, MiddlewareNext) -> &@core.Responder noraise
 
 pub(all) struct MiddlewareNext(async () -> &@core.Responder noraise)
-#deprecated
-pub fn MiddlewareNext::inner(Self) -> async () -> &@core.Responder noraise
 
 pub struct Mocket {
   // private fields
@@ -162,8 +156,6 @@ pub enum WebSocketEvent {
 }
 
 pub(all) struct WebSocketHandler((WebSocketEvent) -> Unit)
-#deprecated
-pub fn WebSocketHandler::inner(Self) -> (WebSocketEvent) -> Unit
 
 pub struct WebSocketPeer {
   // private fields

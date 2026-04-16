@@ -56,9 +56,9 @@ async test "test client 404 for missing route" {
 ///|
 async test "test client custom not found handler" {
   let app = @crescent.Mocket()
-  app.set_not_found_handler(_ => @crescent.HttpResponse::not_found().body(
-      "custom 404",
-    ))
+  app.set_not_found_handler(_ => {
+    @crescent.HttpResponse::not_found().body("custom 404")
+  })
   let client = @test_client.TestClient(app)
   let res = client.get("/anything")
   assert_eq(res.status, NotFound)

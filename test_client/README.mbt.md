@@ -188,9 +188,9 @@ headers at once:
 ///|
 async test "assert status and multiple headers" {
   let app = @crescent.Mocket()
-  app.get("/", _ => @crescent.HttpResponse::ok()
-    .header("X-Custom", "v")
-    .body("ok"))
+  app.get("/", _ => {
+    @crescent.HttpResponse::ok().header("X-Custom", "v").body("ok")
+  })
   let client = @test_client.TestClient(app)
   let res = client.get("/")
   assert_eq(res.status, OK)
