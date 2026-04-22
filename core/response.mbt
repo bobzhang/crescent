@@ -39,7 +39,7 @@ fn HttpResponse::new(
     status_code,
     headers: headers.unwrap_or({}),
     cookies: cookies.unwrap_or({}),
-    raw_body: raw_body.unwrap_or(""),
+    raw_body: raw_body.unwrap_or(b""),
   }
 }
 

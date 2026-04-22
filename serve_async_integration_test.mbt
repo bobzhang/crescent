@@ -345,7 +345,7 @@ async fn read_chunked_http_body(client : @socket.Tcp) -> String {
       _ => fail("invalid chunked response size: \{chunk_len_text}")
     }
     if chunk_len == 0 {
-      guard client.read_exactly(2) == "\r\n" else {
+      guard client.read_exactly(2) == b"\r\n" else {
         fail("invalid chunked response terminator")
       }
       return @utf8.decode(buffer.contents()) catch {
@@ -353,7 +353,7 @@ async fn read_chunked_http_body(client : @socket.Tcp) -> String {
       }
     }
     buffer.write_bytes(client.read_exactly(chunk_len))
-    guard client.read_exactly(2) == "\r\n" else {
+    guard client.read_exactly(2) == b"\r\n" else {
       fail("invalid chunked response chunk terminator")
     }
   }
@@ -2901,7 +2901,7 @@ async test "serve handles websocket text and binary messages" {
     inspect(text_reply.kind, content="Text")
     inspect(text_reply.read_all().text(), content="echo:moonbit")
 
-    client.send_binary("bytes")
+    client.send_binary(b"bytes")
     let binary_reply = client.recv()
     inspect(binary_reply.kind, content="Binary")
     inspect(binary_reply.read_all().text(), content="bytes")
