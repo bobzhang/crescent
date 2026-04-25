@@ -207,11 +207,11 @@ Crescent is a MoonBit module with a root package and ten sub-packages.
 ```mermaid
 graph TB
     subgraph "User Application"
-        APP["fn main"]
+        MAIN["fn main"]
     end
 
     subgraph "Crescent Framework (root package)"
-        MOCKET["App<br/>(Application)"]
+        APP["App<br/>(Application)"]
         DISPATCH["dispatch()<br/>(Request Pipeline)"]
         MW["Middleware<br/>Chain"]
         HANDLER["HttpHandler /<br/>Typed Handler"]
@@ -237,20 +237,20 @@ graph TB
         CORE["moonbitlang/core<br/>(json, string, buffer, utf8)"]
     end
 
-    APP --> MOCKET
-    MOCKET --> DISPATCH
+    MAIN --> APP
+    APP --> DISPATCH
     DISPATCH --> MW --> HANDLER --> RESPONDER
-    MOCKET --> SERVE
+    APP --> SERVE
     SERVE --> ASYNC
-    MOCKET --> CORE_PKG
+    APP --> CORE_PKG
     DISPATCH --> ROUTER
     DISPATCH --> HTTP
-    MOCKET --> COOKIE
-    CORS --> MOCKET
-    MIDDLEWARE --> MOCKET
-    STATICFILE --> MOCKET
+    APP --> COOKIE
+    CORS --> APP
+    MIDDLEWARE --> APP
+    STATICFILE --> APP
     FETCH --> CORE_PKG
-    TESTCLIENT --> MOCKET
+    TESTCLIENT --> APP
     CORE_PKG --> HTTP
     CORE_PKG --> COOKIE
     HTTP --> CORE
