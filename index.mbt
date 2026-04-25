@@ -17,10 +17,10 @@ pub struct App {
   /// O(path_length) lookup for parameterized paths (`:param`, `*`, `**`).
   priv dynamic_routes : @router.RadixRouter[HttpHandler]
   /// O(1) lookup for fixed WebSocket paths.
-  priv ws_static_routes : Map[String, WebSocketHandler]
+  priv ws_static_routes : Map[String, @ws.WebSocketHandler]
   /// O(path_length) lookup for parameterized WebSocket paths.
   /// Uses `"WS"` as a synthetic method key for consistent precedence with HTTP routes.
-  priv ws_dynamic_routes : @router.RadixRouter[WebSocketHandler]
+  priv ws_dynamic_routes : @router.RadixRouter[@ws.WebSocketHandler]
   /// Unique ID scoping the native WebSocket hub for this app instance.
   priv ws_runtime_id : String
   /// Catch-all handler for URLs that match no registered route, set via
@@ -251,13 +251,33 @@ pub fn App::has_not_found_handler(self : App) -> Bool {
 }
 
 ///|
+/// Returns all WebSocket runtime IDs scoped to this App instance, in
+/// the form `<app_id>/serve-<n>` (one per active `serve_on`/`serve`
+/// invocation). Used in tests to verify runtime registration and
+/// cleanup; production code should not need this.
+pub fn App::ws_runtime_ids(self : App) -> Array[String] {
+  let prefix = self.ws_runtime_id + "/"
+  let result : Array[String] = []
+  for runtime_id in @ws.registered_runtime_ids() {
+    if runtime_id.has_prefix(prefix) {
+      result.push(runtime_id)
+    }
+  }
+  result
+}
+
+///|
 /// Registers a WebSocket handler for the given path, matched regardless of HTTP method.
 ///
 /// Dynamic patterns (`:param`, `*`, `**`) are inserted into the same radix
 /// tree implementation used for HTTP routes, giving them consistent precedence:
 /// static > param > wildcard > globstar. Re-registering the same path overrides
 /// the previous handler.
-pub fn App::ws(self : App, path : String, handler : WebSocketHandler) -> Unit {
+pub fn App::ws(
+  self : App,
+  path : String,
+  handler : @ws.WebSocketHandler,
+) -> Unit {
   let path = self.base_path + path
   // Static path: direct map lookup
   if !path.contains(":") && !path.contains("*") {

@@ -306,7 +306,7 @@ async fn App::handle_request(
     // settings are captured once before entering the peer loop.
     let websocket_max_message_bytes = options.websocket_max_message_bytes
     let websocket_outgoing_queue_capacity = options.websocket_outgoing_queue_capacity.unwrap_or(
-      DEFAULT_NATIVE_WS_OUTGOING_QUEUE_CAPACITY,
+      @ws.DEFAULT_OUTGOING_QUEUE_CAPACITY,
     )
     let websocket_overflow_policy = options.websocket_overflow_policy.unwrap_or(
       DropOldest,
@@ -318,7 +318,7 @@ async fn App::handle_request(
         // request buffer, so borrowed views would dangle.
         let ws_params : Map[String, String] = {}
         route_params.each((k, v) => ws_params.set(k, v.to_string()))
-        handle_websocket_route_async(
+        @ws.handle_route_async(
           ws_runtime_id, request, conn, ws_handler, ws_params, websocket_max_message_bytes,
           websocket_outgoing_queue_capacity, websocket_overflow_policy, websocket_read_timeout_ms,
         )
@@ -482,7 +482,7 @@ pub async fn App::serve_on(
   options? : NativeServeOptions = NativeServeOptions(),
 ) -> Unit {
   let ws_runtime_id = next_ws_serve_runtime_id(self)
-  defer cleanup_native_ws_runtime(ws_runtime_id)
+  defer @ws.cleanup_runtime(ws_runtime_id)
   match shutdown {
     None => run_native_server(self, ws_runtime_id, server, options)
     Some(shutdown) =>

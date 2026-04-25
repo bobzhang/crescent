@@ -10,3 +10,12 @@ pub using @core {
   html,
   text,
 }
+
+///|
+pub using @ws {
+  type WebSocketPeer,
+  type WebSocketEvent,
+  type WebSocketAggregatedMessage,
+  type WebSocketHandler,
+  type NativeWebSocketOverflowPolicy,
+}

@@ -1,0 +1,72 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "bobzhang/crescent/websocket"
+
+import {
+  "moonbitlang/async/http",
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub const DEFAULT_OUTGOING_QUEUE_CAPACITY : Int = 256
+
+pub fn channel_member_count(String) -> Int
+
+pub fn channel_member_count_in_runtime(String, String) -> Int
+
+pub fn cleanup_runtime(String) -> Unit
+
+pub fn connection_is_registered(String) -> Bool
+
+pub async fn handle_route_async(String, @http.Request, @http.ServerConnection, WebSocketHandler, Map[String, String], Int?, Int, NativeWebSocketOverflowPolicy, Int?) -> Unit
+
+pub fn outgoing_queue_is_closed_for_test(String) -> Bool?
+
+pub fn registered_connection_count() -> Int
+
+pub fn registered_runtime_count() -> Int
+
+pub fn registered_runtime_ids() -> Array[String]
+
+pub fn runtime_id_for_connection(String) -> String?
+
+pub fn runtime_is_registered(String) -> Bool
+
+// Errors
+
+// Types and methods
+pub(all) enum NativeWebSocketOverflowPolicy {
+  DropOldest
+  DropLatest
+} derive(Eq, @debug.Debug)
+pub impl Show for NativeWebSocketOverflowPolicy
+
+pub(all) enum WebSocketAggregatedMessage {
+  Text(String)
+  Binary(Bytes)
+}
+
+pub(all) enum WebSocketEvent {
+  Open(WebSocketPeer)
+  Message(WebSocketPeer, WebSocketAggregatedMessage)
+  Close(WebSocketPeer)
+}
+
+pub(all) struct WebSocketHandler((WebSocketEvent) -> Unit)
+
+pub struct WebSocketPeer {
+  // private fields
+}
+pub fn WebSocketPeer::WebSocketPeer(connection_id~ : String, params? : Map[String, String]) -> Self
+pub fn WebSocketPeer::binary(Self, Bytes) -> Unit
+pub fn WebSocketPeer::connection_id(Self) -> String
+pub fn WebSocketPeer::param(Self, String) -> String?
+pub fn WebSocketPeer::publish(Self, String, String) -> Unit
+pub fn WebSocketPeer::subscribe(Self, String) -> Unit
+pub fn WebSocketPeer::text(Self, String) -> Unit
+pub fn WebSocketPeer::to_string(Self) -> String
+pub fn WebSocketPeer::unsubscribe(Self, String) -> Unit
+
+// Type aliases
+
+// Traits
+

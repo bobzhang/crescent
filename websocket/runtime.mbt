@@ -25,7 +25,9 @@ let native_ws_hubs : Map[String, NativeWebSocketHub] = Map::new()
 let native_ws_connection_hubs : Map[String, String] = Map::new()
 
 ///|
-const DEFAULT_NATIVE_WS_OUTGOING_QUEUE_CAPACITY : Int = 256
+/// Default per-connection capacity for the outbound WebSocket message queue,
+/// used when `NativeServeOptions::websocket_outgoing_queue_capacity` is None.
+pub const DEFAULT_OUTGOING_QUEUE_CAPACITY : Int = 256
 
 ///|
 const NATIVE_WS_READ_TIMEOUT_REASON : String = "websocket read timeout"
@@ -263,7 +265,7 @@ fn ws_publish(connection_id : String, channel : String, msg : String) -> Unit {
 
 ///|
 async fn write_native_ws_outgoing(
-  ws : @websocket.Conn,
+  ws : @async_websocket.Conn,
   outgoing : @async.Queue[NativeWebSocketOutbound],
 ) -> Unit {
   for ;; {
@@ -277,14 +279,14 @@ async fn write_native_ws_outgoing(
 
 ///|
 async fn recv_native_ws_message(
-  ws : @websocket.Conn,
+  ws : @async_websocket.Conn,
   read_timeout_ms : Int?,
-) -> @websocket.Message? {
+) -> @async_websocket.Message? {
   match read_timeout_ms {
     Some(read_timeout_ms) =>
       match @async.with_timeout_opt(read_timeout_ms, () => try? ws.recv()) {
         Some(Ok(message)) => Some(message)
-        Some(Err(@websocket.ConnectionClosed(_, _))) => None
+        Some(Err(@async_websocket.ConnectionClosed(_, _))) => None
         Some(Err(err)) => raise err
         None => {
           ignore(
@@ -297,10 +299,10 @@ async fn recv_native_ws_message(
         }
       }
     None => {
-      let message_result : Result[@websocket.Message, Error] = try? ws.recv()
+      let message_result : Result[@async_websocket.Message, Error] = try? ws.recv()
       match message_result {
         Ok(message) => Some(message)
-        Err(@websocket.ConnectionClosed(_, _)) => None
+        Err(@async_websocket.ConnectionClosed(_, _)) => None
         Err(err) => raise err
       }
     }
@@ -309,7 +311,7 @@ async fn recv_native_ws_message(
 
 ///|
 fn decode_native_ws_message(
-  message_kind : @websocket.MessageKind,
+  message_kind : @async_websocket.MessageKind,
   contents : Bytes,
 ) -> WebSocketAggregatedMessage {
   match message_kind {
@@ -344,8 +346,8 @@ fn native_ws_chunk_exceeds_limit(
 
 ///|
 async fn read_native_ws_message_contents(
-  ws : @websocket.Conn,
-  message : @websocket.Message,
+  ws : @async_websocket.Conn,
+  message : @async_websocket.Message,
   max_message_bytes : Int?,
 ) -> WebSocketAggregatedMessage? {
   match max_message_bytes {
@@ -381,7 +383,7 @@ async fn read_native_ws_message_contents(
 }
 
 ///|
-async fn send_native_ws_shutdown_close(ws : @websocket.Conn) -> Unit {
+async fn send_native_ws_shutdown_close(ws : @async_websocket.Conn) -> Unit {
   ignore(
     try? @async.protect_from_cancel(resume_on_cancel=true, () => {
       ws.send_close(code=GoingAway, reason=NATIVE_WS_SERVER_SHUTDOWN_REASON)
@@ -429,7 +431,7 @@ fn normalize_native_websocket_request(request : @http.Request) -> @http.Request 
 ///
 /// Lifecycle phases:
 ///
-///   1. **Handshake.** `@websocket.from_http_server` validates the upgrade
+///   1. **Handshake.** `@async_websocket.from_http_server` validates the upgrade
 ///      headers and writes the `101 Switching Protocols` response.
 ///      `InvalidHandshake` is swallowed silently — no Open/Close events fire,
 ///      the underlying `conn` closes via `defer ws.close()`. Other errors
@@ -470,7 +472,7 @@ fn normalize_native_websocket_request(request : @http.Request) -> @http.Request 
 ///   channel memberships, and any subscriptions the user added during
 ///   `Close`. Running `unregister` only on the happy path would leak those
 ///   on any exception inside the Close handler.
-async fn handle_websocket_route_async(
+pub async fn handle_route_async(
   runtime_id : String,
   request : @http.Request,
   conn : @http.ServerConnection,
@@ -488,7 +490,7 @@ async fn handle_websocket_route_async(
   // so from_http_server's strict RFC 6455 validation accepts real-world
   // clients (browsers tend to use "Upgrade, keep-alive" etc.).
   let ws = try
-    @websocket.from_http_server(
+    @async_websocket.from_http_server(
       normalize_native_websocket_request(request),
       conn,
     )
@@ -496,7 +498,7 @@ async fn handle_websocket_route_async(
     // Handshake failed: return silently. `conn` is still owned by the
     // caller's keep-alive loop, which will close it. We do NOT want to send
     // a Close event to the user handler (Open never fired).
-    @websocket.InvalidHandshake(_) => return
+    @async_websocket.InvalidHandshake(_) => return
     // Transport-level error during handshake (e.g. socket write failed):
     // bubble up, let the caller close `conn`.
     err => raise err
@@ -574,7 +576,123 @@ async fn handle_websocket_route_async(
 }
 
 ///|
-fn cleanup_native_ws_runtime(runtime_id : String) -> Unit {
+/// Returns all currently registered runtime IDs. Intended for tests and
+/// debugging; production code should not need this.
+pub fn registered_runtime_ids() -> Array[String] {
+  let result : Array[String] = []
+  native_ws_hubs.each((runtime_id, _) => result.push(runtime_id))
+  result
+}
+
+///|
+/// Returns the number of currently registered WebSocket runtimes.
+pub fn registered_runtime_count() -> Int {
+  let mut count = 0
+  native_ws_hubs.each((_, _) => count += 1)
+  count
+}
+
+///|
+/// Returns true if the given runtime ID has a registered hub.
+pub fn runtime_is_registered(runtime_id : String) -> Bool {
+  native_ws_hubs.get(runtime_id) is Some(_)
+}
+
+///|
+/// Returns the number of registered WebSocket connections across all runtimes.
+pub fn registered_connection_count() -> Int {
+  let mut count = 0
+  native_ws_connection_hubs.each((_, _) => count += 1)
+  count
+}
+
+///|
+/// Returns true if the given connection ID is registered with any runtime.
+pub fn connection_is_registered(connection_id : String) -> Bool {
+  native_ws_connection_hubs.get(connection_id) is Some(_)
+}
+
+///|
+/// Returns the runtime ID that owns this connection, or None if the
+/// connection is not registered.
+pub fn runtime_id_for_connection(connection_id : String) -> String? {
+  native_ws_connection_hubs.get(connection_id)
+}
+
+///|
+/// Test helper: returns Some(true) if the outgoing queue for this
+/// connection has been closed, Some(false) if it is still open, or None
+/// if the connection is not registered. Probes the queue with a
+/// non-blocking try_put of an empty binary sentinel; on a still-open
+/// queue, the sentinel is enqueued (clients should treat empty binary
+/// frames as benign). Intended only for runtime invariant tests, not
+/// production code.
+pub fn outgoing_queue_is_closed_for_test(connection_id : String) -> Bool? {
+  match native_ws_connection_hubs.get(connection_id) {
+    None => None
+    Some(runtime_id) =>
+      match native_ws_hubs.get(runtime_id) {
+        None => None
+        Some(hub) =>
+          match hub.connections.get(connection_id) {
+            None => None
+            Some(connection) => {
+              let result : Result[Bool, Error] = try? connection.outgoing.try_put(
+                SendBinary(b""),
+              )
+              Some(
+                match result {
+                  Err(_) => true
+                  _ => false
+                },
+              )
+            }
+          }
+      }
+  }
+}
+
+///|
+/// Returns the number of subscribers to the given channel across all runtimes.
+pub fn channel_member_count(channel : String) -> Int {
+  let mut count = 0
+  native_ws_hubs.each((_runtime_id, hub) => {
+    match hub.channels.get(channel) {
+      Some(members) => members.each((_, _) => count += 1)
+      None => ()
+    }
+  })
+  count
+}
+
+///|
+/// Returns the number of subscribers to the given channel within a specific
+/// runtime, or 0 if the runtime is not registered.
+pub fn channel_member_count_in_runtime(
+  runtime_id : String,
+  channel : String,
+) -> Int {
+  match native_ws_hubs.get(runtime_id) {
+    Some(hub) =>
+      match hub.channels.get(channel) {
+        Some(members) => {
+          let mut count = 0
+          members.each((_, _) => count += 1)
+          count
+        }
+        None => 0
+      }
+    None => 0
+  }
+}
+
+///|
+/// Tears down all hub state associated with a runtime ID: closes outgoing
+/// queues, removes channel memberships, and drops the hub. Called via
+/// `defer` from `App::serve_on` when serving ends, and used by tests to
+/// reset state between cases. Safe to call on a runtime ID that was never
+/// registered.
+pub fn cleanup_runtime(runtime_id : String) -> Unit {
   match native_ws_hubs.get(runtime_id) {
     Some(hub) => {
       let connection_ids : Array[String] = []

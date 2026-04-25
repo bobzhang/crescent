@@ -12,21 +12,6 @@ pub suberror NativeServeError {
 } derive(Debug, ToJson)
 
 ///|
-/// Policy for handling a full outbound WebSocket message queue.
-pub(all) enum NativeWebSocketOverflowPolicy {
-  DropOldest
-  DropLatest
-} derive(Debug, Eq)
-
-///|
-pub impl Show for NativeWebSocketOverflowPolicy with output(self, logger) {
-  match self {
-    DropOldest => logger.write_string("DropOldest")
-    DropLatest => logger.write_string("DropLatest")
-  }
-}
-
-///|
 /// Configuration options for the native async HTTP server runtime.
 /// The constructor validates all values eagerly and raises on invalid input.
 pub struct NativeServeOptions {
@@ -43,7 +28,7 @@ pub struct NativeServeOptions {
   /// Maximum buffered outbound WebSocket messages per connection (default: 256).
   websocket_outgoing_queue_capacity : Int?
   /// Policy when the outbound WebSocket queue is full (`DropOldest` or `DropLatest`).
-  websocket_overflow_policy : NativeWebSocketOverflowPolicy?
+  websocket_overflow_policy : @ws.NativeWebSocketOverflowPolicy?
   /// Timeout for the next inbound WebSocket message in milliseconds; exceeding closes the connection.
   websocket_read_timeout_ms : Int?
   /// Maximum inbound WebSocket message size in bytes; exceeding closes with `1009 Message Too Big`.
@@ -62,7 +47,7 @@ pub fn NativeServeOptions::NativeServeOptions(
   handler_timeout_ms? : Int,
   shutdown_timeout_ms? : Int,
   websocket_outgoing_queue_capacity? : Int,
-  websocket_overflow_policy? : NativeWebSocketOverflowPolicy,
+  websocket_overflow_policy? : @ws.NativeWebSocketOverflowPolicy,
   websocket_read_timeout_ms? : Int,
   websocket_max_message_bytes? : Int,
 ) -> NativeServeOptions raise {

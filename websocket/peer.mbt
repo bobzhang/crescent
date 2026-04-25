@@ -21,6 +21,13 @@ pub fn WebSocketPeer::WebSocketPeer(
 }
 
 ///|
+/// Returns the unique connection ID assigned to this peer by the runtime.
+/// Stable for the lifetime of the connection.
+pub fn WebSocketPeer::connection_id(self : WebSocketPeer) -> String {
+  self.connection_id
+}
+
+///|
 /// Returns a route parameter captured from the WebSocket upgrade URL,
 /// or `None` if the parameter was not present.
 ///
@@ -89,7 +96,7 @@ pub fn WebSocketPeer::to_string(self : WebSocketPeer) -> String {
 
 ///|
 /// Events delivered to a WebSocket handler: open, message, or close.
-pub enum WebSocketEvent {
+pub(all) enum WebSocketEvent {
   Open(WebSocketPeer)
   Message(WebSocketPeer, WebSocketAggregatedMessage)
   Close(WebSocketPeer)
@@ -97,7 +104,7 @@ pub enum WebSocketEvent {
 
 ///|
 /// A fully assembled WebSocket message, either text or binary.
-pub enum WebSocketAggregatedMessage {
+pub(all) enum WebSocketAggregatedMessage {
   Text(String)
   Binary(Bytes)
 }
@@ -105,3 +112,18 @@ pub enum WebSocketAggregatedMessage {
 ///|
 /// Handler function type for WebSocket route events.
 pub(all) struct WebSocketHandler((WebSocketEvent) -> Unit)
+
+///|
+/// Policy for handling a full outbound WebSocket message queue.
+pub(all) enum NativeWebSocketOverflowPolicy {
+  DropOldest
+  DropLatest
+} derive(Debug, Eq)
+
+///|
+pub impl Show for NativeWebSocketOverflowPolicy with output(self, logger) {
+  match self {
+    DropOldest => logger.write_string("DropOldest")
+    DropLatest => logger.write_string("DropLatest")
+  }
+}

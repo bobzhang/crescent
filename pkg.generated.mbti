@@ -3,6 +3,7 @@ package "bobzhang/crescent"
 
 import {
   "bobzhang/crescent/core",
+  "bobzhang/crescent/websocket",
   "moonbitlang/async/aqueue",
   "moonbitlang/async/http",
   "moonbitlang/core/buffer",
@@ -73,7 +74,8 @@ pub fn App::static_assets(Self, String, &ServeStaticProvider) -> Unit
 pub fn App::trace(Self, String, async (Event) -> &@core.Responder) -> Unit
 pub fn App::trace_raw(Self, String, HttpHandler) -> Unit
 pub fn App::use_middleware(Self, Middleware, base_path? : String) -> Unit
-pub fn App::ws(Self, String, WebSocketHandler) -> Unit
+pub fn App::ws(Self, String, @websocket.WebSocketHandler) -> Unit
+pub fn App::ws_runtime_ids(Self) -> Array[String]
 
 pub(all) struct Event {
   req : @core.HttpRequest
@@ -104,17 +106,11 @@ pub struct NativeServeOptions {
   handler_timeout_ms : Int?
   shutdown_timeout_ms : Int?
   websocket_outgoing_queue_capacity : Int?
-  websocket_overflow_policy : NativeWebSocketOverflowPolicy?
+  websocket_overflow_policy : @websocket.NativeWebSocketOverflowPolicy?
   websocket_read_timeout_ms : Int?
   websocket_max_message_bytes : Int?
 }
-pub fn NativeServeOptions::NativeServeOptions(max_connections? : Int, max_request_body_bytes? : Int, request_body_read_timeout_ms? : Int, handler_timeout_ms? : Int, shutdown_timeout_ms? : Int, websocket_outgoing_queue_capacity? : Int, websocket_overflow_policy? : NativeWebSocketOverflowPolicy, websocket_read_timeout_ms? : Int, websocket_max_message_bytes? : Int) -> Self raise
-
-pub(all) enum NativeWebSocketOverflowPolicy {
-  DropOldest
-  DropLatest
-} derive(Eq, @debug.Debug)
-pub impl Show for NativeWebSocketOverflowPolicy
+pub fn NativeServeOptions::NativeServeOptions(max_connections? : Int, max_request_body_bytes? : Int, request_body_read_timeout_ms? : Int, handler_timeout_ms? : Int, shutdown_timeout_ms? : Int, websocket_outgoing_queue_capacity? : Int, websocket_overflow_policy? : @websocket.NativeWebSocketOverflowPolicy, websocket_read_timeout_ms? : Int, websocket_max_message_bytes? : Int) -> Self raise
 
 pub struct ResourceConfig {
   list : (async (Event) -> &@core.Responder)?
@@ -138,31 +134,6 @@ pub fn StaticAssetMeta::StaticAssetMeta(asset_type? : String, etag? : String, mt
 type StaticResolvedResponder
 pub impl @core.Responder for StaticResolvedResponder
 
-pub enum WebSocketAggregatedMessage {
-  Text(String)
-  Binary(Bytes)
-}
-
-pub enum WebSocketEvent {
-  Open(WebSocketPeer)
-  Message(WebSocketPeer, WebSocketAggregatedMessage)
-  Close(WebSocketPeer)
-}
-
-pub(all) struct WebSocketHandler((WebSocketEvent) -> Unit)
-
-pub struct WebSocketPeer {
-  // private fields
-}
-pub fn WebSocketPeer::WebSocketPeer(connection_id~ : String, params? : Map[String, String]) -> Self
-pub fn WebSocketPeer::binary(Self, Bytes) -> Unit
-pub fn WebSocketPeer::param(Self, String) -> String?
-pub fn WebSocketPeer::publish(Self, String, String) -> Unit
-pub fn WebSocketPeer::subscribe(Self, String) -> Unit
-pub fn WebSocketPeer::text(Self, String) -> Unit
-pub fn WebSocketPeer::to_string(Self) -> String
-pub fn WebSocketPeer::unsubscribe(Self, String) -> Unit
-
 // Type aliases
 pub using @core {type Html}
 
@@ -172,7 +143,17 @@ pub using @core {type HttpRequest}
 
 pub using @core {type HttpResponse}
 
+pub using @websocket {type NativeWebSocketOverflowPolicy}
+
 pub using @core {type StatusCode}
+
+pub using @websocket {type WebSocketAggregatedMessage}
+
+pub using @websocket {type WebSocketEvent}
+
+pub using @websocket {type WebSocketHandler}
+
+pub using @websocket {type WebSocketPeer}
 
 pub using @core {trait BodyReader}
 

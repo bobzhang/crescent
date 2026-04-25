@@ -38,43 +38,30 @@ async fn wait_until_websocket_lifecycle_ready(port : Int) -> Unit {
   })
 }
 
+// Helpers below proxy to the public introspection API in
+// bobzhang/crescent/websocket. Pure-internal whitebox tests (drop-policy
+// enqueue, hub primitives, decode/chunk helpers) live in
+// websocket/runtime_wbtest.mbt where they have direct access to private
+// state.
+
 ///|
 fn native_ws_hub_count() -> Int {
-  let mut count = 0
-  native_ws_hubs.each((_runtime_id, _) => count += 1)
-  count
+  @ws.registered_runtime_count()
 }
 
 ///|
 fn native_ws_connection_hub_count() -> Int {
-  let mut count = 0
-  native_ws_connection_hubs.each((_connection_id, _) => count += 1)
-  count
+  @ws.registered_connection_count()
 }
 
 ///|
 fn native_ws_channel_member_count(channel : String) -> Int {
-  let mut count = 0
-  native_ws_hubs.each((_runtime_id, hub) => {
-    match hub.channels.get(channel) {
-      Some(members) => members.each((_member_id, _) => count += 1)
-      None => ()
-    }
-  })
-  count
+  @ws.channel_member_count(channel)
 }
 
 ///|
 fn native_ws_runtime_ids_for_app(app : App) -> Array[String] {
-  let runtime_ids : Array[String] = []
-  let prefix = app.ws_runtime_id + "/"
-  native_ws_hubs.each((runtime_id, _hub) => {
-    match runtime_id.find(prefix) {
-      Some(0) => runtime_ids.push(runtime_id)
-      _ => ()
-    }
-  })
-  runtime_ids
+  app.ws_runtime_ids()
 }
 
 ///|
@@ -82,87 +69,16 @@ fn native_ws_channel_member_count_in_runtime(
   runtime_id : String,
   channel : String,
 ) -> Int {
-  match native_ws_hubs.get(runtime_id) {
-    Some(hub) =>
-      match hub.channels.get(channel) {
-        Some(members) => {
-          let mut count = 0
-          members.each((_member_id, _) => count += 1)
-          count
-        }
-        None => 0
-      }
-    None => 0
-  }
+  @ws.channel_member_count_in_runtime(runtime_id, channel)
 }
 
 ///|
 fn native_ws_connection_exists(connection_id : String) -> Bool {
-  native_ws_connection_hubs.get(connection_id) is Some(_)
+  @ws.connection_is_registered(connection_id)
 }
 
-///|
-fn test_native_ws_connection(
-  capacity : Int,
-  overflow_policy : NativeWebSocketOverflowPolicy,
-) -> NativeWebSocketConnection {
-  {
-    outgoing: @async.Queue::new(kind=Blocking(capacity)),
-    overflow_policy,
-    subscribed_channels: Map::new(),
-  }
-}
-
-///|
-test "native websocket message limit helpers handle int max boundaries" {
-  let max_int = 2_147_483_647
-  inspect(next_native_ws_message_chunk_size(max_int, 0), content="1024")
-  inspect(native_ws_chunk_exceeds_limit(max_int, max_int, 1), content="true")
-  inspect(
-    native_ws_chunk_exceeds_limit(max_int, max_int - 1, 1),
-    content="false",
-  )
-}
-
-///|
-test "enqueue_native_ws_outgoing_to_connection drops oldest when configured" {
-  let connection = test_native_ws_connection(2, DropOldest)
-  enqueue_native_ws_outgoing_to_connection(connection, SendText("one"))
-  enqueue_native_ws_outgoing_to_connection(connection, SendText("two"))
-  enqueue_native_ws_outgoing_to_connection(connection, SendText("three"))
-
-  match connection.outgoing.try_get() {
-    Some(SendText(text)) => inspect(text, content="two")
-    Some(_) => fail("unexpected first queued websocket message kind")
-    None => fail("expected first queued websocket message")
-  }
-  match connection.outgoing.try_get() {
-    Some(SendText(text)) => inspect(text, content="three")
-    Some(_) => fail("unexpected second queued websocket message kind")
-    None => fail("expected second queued websocket message")
-  }
-  inspect(connection.outgoing.try_get() is None, content="true")
-}
-
-///|
-test "enqueue_native_ws_outgoing_to_connection drops latest when configured" {
-  let connection = test_native_ws_connection(2, DropLatest)
-  enqueue_native_ws_outgoing_to_connection(connection, SendText("one"))
-  enqueue_native_ws_outgoing_to_connection(connection, SendText("two"))
-  enqueue_native_ws_outgoing_to_connection(connection, SendText("three"))
-
-  match connection.outgoing.try_get() {
-    Some(SendText(text)) => inspect(text, content="one")
-    Some(_) => fail("unexpected first queued websocket message kind")
-    None => fail("expected first queued websocket message")
-  }
-  match connection.outgoing.try_get() {
-    Some(SendText(text)) => inspect(text, content="two")
-    Some(_) => fail("unexpected second queued websocket message kind")
-    None => fail("expected second queued websocket message")
-  }
-  inspect(connection.outgoing.try_get() is None, content="true")
-}
+// Internal-helper unit tests (drop-policy enqueue, decode helpers, hub
+// register/cleanup primitives) moved to websocket/runtime_wbtest.mbt.
 
 ///|
 async test "serve_on clears websocket runtime state on cancellation" {
@@ -380,7 +296,7 @@ async test "serve_on makes closed websocket peers inert after unregister" {
     @async.retry(FixedDelay(20), max_retry=50, () => {
       match closed_peer.val {
         Some(peer) => {
-          guard !native_ws_connection_exists(peer.connection_id) &&
+          guard !native_ws_connection_exists(peer.connection_id()) &&
             native_ws_channel_member_count(channel) == 1 else {
             raise WebSocketLifecycleServerNotReady
           }
@@ -432,22 +348,14 @@ async test "serve_on closes outgoing queues before close-handler cleanup" {
         Open(peer) => peer.subscribe(channel)
         Message(peer, Text("publish")) => peer.publish(channel, "fanout")
         Close(peer) => {
-          close_connection_id.val = Some(peer.connection_id)
+          close_connection_id.val = Some(peer.connection_id())
           close_channel_members.val = Some(
             native_ws_channel_member_count(channel),
           )
-          match resolve_native_ws_connection(peer.connection_id) {
-            Some((_, connection)) => {
+          match @ws.outgoing_queue_is_closed_for_test(peer.connection_id()) {
+            Some(closed) => {
               close_saw_registered.val = Some(true)
-              let queue_put_result : Result[Bool, Error] = try? connection.outgoing.try_put(
-                SendText("ghost"),
-              )
-              close_saw_queue_closed.val = Some(
-                match queue_put_result {
-                  Err(_) => true
-                  _ => false
-                },
-              )
+              close_saw_queue_closed.val = Some(closed)
             }
             None => {
               close_saw_registered.val = Some(false)
@@ -535,7 +443,7 @@ async test "serve_on cleans up subscriptions added during close handler" {
       match event {
         Open(peer) => peer.subscribe(primary_channel)
         Close(peer) => {
-          close_connection_id.val = Some(peer.connection_id)
+          close_connection_id.val = Some(peer.connection_id())
           peer.subscribe(late_channel)
           close_primary_members.val = Some(
             native_ws_channel_member_count(primary_channel),
@@ -612,7 +520,7 @@ async test "serve_on handles unsubscribe then subscribe mutations during close h
       match event {
         Open(peer) => peer.subscribe(primary_channel)
         Close(peer) => {
-          close_connection_id.val = Some(peer.connection_id)
+          close_connection_id.val = Some(peer.connection_id())
           peer.unsubscribe(primary_channel)
           peer.subscribe(late_channel)
           close_primary_members.val = Some(
@@ -687,7 +595,9 @@ async test "serve_on keeps close-handler mutations isolated across reused app ru
       Open(peer) => peer.subscribe("room")
       Message(peer, Text("publish")) => peer.publish("room", "fanout")
       Close(peer) => {
-        close_runtime_id.val = native_ws_connection_hubs.get(peer.connection_id)
+        close_runtime_id.val = @ws.runtime_id_for_connection(
+          peer.connection_id(),
+        )
         peer.subscribe("late")
         let runtime_ids = native_ws_runtime_ids_for_app(app)
         let mut room_members = 0
@@ -1634,282 +1544,6 @@ async test "serve_on_until queue close clears surviving reused runtime after shu
   }
 }
 
-///|
-test "ensure_native_ws_hub creates new hub for new runtime id" {
-  let runtime_id = "test-ensure-hub-new"
-  let hub = ensure_native_ws_hub(runtime_id)
-  inspect(hub.connections.is_empty(), content="true")
-  inspect(hub.connection_counter.val, content="0")
-  cleanup_native_ws_runtime(runtime_id)
-}
-
-///|
-test "ensure_native_ws_hub returns existing hub for same runtime id" {
-  let runtime_id = "test-ensure-hub-existing"
-  let hub1 = ensure_native_ws_hub(runtime_id)
-  hub1.connection_counter.val = 42
-  let hub2 = ensure_native_ws_hub(runtime_id)
-  inspect(hub2.connection_counter.val, content="42")
-  cleanup_native_ws_runtime(runtime_id)
-}
-
-///|
-test "next_native_ws_connection_id increments counter and formats id" {
-  let runtime_id = "test-conn-id"
-  let hub = ensure_native_ws_hub(runtime_id)
-  let id1 = next_native_ws_connection_id(runtime_id, hub)
-  inspect(id1, content="test-conn-id:1")
-  let id2 = next_native_ws_connection_id(runtime_id, hub)
-  inspect(id2, content="test-conn-id:2")
-  let id3 = next_native_ws_connection_id(runtime_id, hub)
-  inspect(id3, content="test-conn-id:3")
-  cleanup_native_ws_runtime(runtime_id)
-}
-
-///|
-test "register_native_ws_connection makes connection resolvable" {
-  let runtime_id = "test-register"
-  let connection_id = "test-register:1"
-  let outgoing = @async.Queue::new(kind=Blocking(10))
-  register_native_ws_connection(runtime_id, connection_id, outgoing, DropOldest)
-  inspect(
-    resolve_native_ws_connection(connection_id) is Some(_),
-    content="true",
-  )
-  inspect(native_ws_connection_exists(connection_id), content="true")
-  cleanup_native_ws_runtime(runtime_id)
-}
-
-///|
-test "unregister_native_ws_connection makes connection unresolvable" {
-  let runtime_id = "test-unregister"
-  let connection_id = "test-unregister:1"
-  let outgoing = @async.Queue::new(kind=Blocking(10))
-  register_native_ws_connection(runtime_id, connection_id, outgoing, DropOldest)
-  inspect(native_ws_connection_exists(connection_id), content="true")
-  unregister_native_ws_connection(connection_id)
-  inspect(native_ws_connection_exists(connection_id), content="false")
-  inspect(
-    resolve_native_ws_connection(connection_id) is Some(_),
-    content="false",
-  )
-}
-
-///|
-test "unregister_native_ws_connection removes hub when last connection removed" {
-  let runtime_id = "test-unregister-hub-removal"
-  let connection_id = "test-unregister-hub-removal:1"
-  let outgoing = @async.Queue::new(kind=Blocking(10))
-  register_native_ws_connection(runtime_id, connection_id, outgoing, DropOldest)
-  inspect(native_ws_hubs.get(runtime_id) is Some(_), content="true")
-  unregister_native_ws_connection(connection_id)
-  inspect(native_ws_hubs.get(runtime_id) is Some(_), content="false")
-}
-
-///|
-test "ws_subscribe adds connection to channel" {
-  let runtime_id = "test-subscribe"
-  let connection_id = "test-subscribe:1"
-  let outgoing = @async.Queue::new(kind=Blocking(10))
-  register_native_ws_connection(runtime_id, connection_id, outgoing, DropOldest)
-  ws_subscribe(connection_id, "channel-a")
-  let channels = snapshot_native_ws_channels(connection_id)
-  inspect(channels.length(), content="1")
-  inspect(channels[0], content="channel-a")
-  inspect(
-    native_ws_channel_member_count_in_runtime(runtime_id, "channel-a"),
-    content="1",
-  )
-  cleanup_native_ws_runtime(runtime_id)
-}
-
-///|
-test "ws_subscribe is idempotent" {
-  let runtime_id = "test-subscribe-idempotent"
-  let connection_id = "test-subscribe-idempotent:1"
-  let outgoing = @async.Queue::new(kind=Blocking(10))
-  register_native_ws_connection(runtime_id, connection_id, outgoing, DropOldest)
-  ws_subscribe(connection_id, "channel-a")
-  ws_subscribe(connection_id, "channel-a")
-  let channels = snapshot_native_ws_channels(connection_id)
-  inspect(channels.length(), content="1")
-  inspect(
-    native_ws_channel_member_count_in_runtime(runtime_id, "channel-a"),
-    content="1",
-  )
-  cleanup_native_ws_runtime(runtime_id)
-}
-
-///|
-test "ws_unsubscribe removes connection from channel" {
-  let runtime_id = "test-unsubscribe"
-  let connection_id = "test-unsubscribe:1"
-  let outgoing = @async.Queue::new(kind=Blocking(10))
-  register_native_ws_connection(runtime_id, connection_id, outgoing, DropOldest)
-  ws_subscribe(connection_id, "channel-a")
-  ws_subscribe(connection_id, "channel-b")
-  ws_unsubscribe(connection_id, "channel-a")
-  let channels = snapshot_native_ws_channels(connection_id)
-  inspect(channels.length(), content="1")
-  inspect(channels[0], content="channel-b")
-  inspect(
-    native_ws_channel_member_count_in_runtime(runtime_id, "channel-a"),
-    content="0",
-  )
-  inspect(
-    native_ws_channel_member_count_in_runtime(runtime_id, "channel-b"),
-    content="1",
-  )
-  cleanup_native_ws_runtime(runtime_id)
-}
-
-///|
-test "ws_unsubscribe on non-subscribed channel is safe" {
-  let runtime_id = "test-unsubscribe-noop"
-  let connection_id = "test-unsubscribe-noop:1"
-  let outgoing = @async.Queue::new(kind=Blocking(10))
-  register_native_ws_connection(runtime_id, connection_id, outgoing, DropOldest)
-  ws_unsubscribe(connection_id, "nonexistent-channel")
-  let channels = snapshot_native_ws_channels(connection_id)
-  inspect(channels.length(), content="0")
-  cleanup_native_ws_runtime(runtime_id)
-}
-
-///|
-test "decode_native_ws_message decodes text message" {
-  match decode_native_ws_message(Text, b"hello") {
-    Text(s) => inspect(s, content="hello")
-    Binary(_) => fail("expected text message")
-  }
-}
-
-///|
-test "decode_native_ws_message decodes binary message" {
-  let data : Bytes = b"binary data"
-  match decode_native_ws_message(Binary, data) {
-    Binary(b) => inspect(b == data, content="true")
-    Text(_) => fail("expected binary message")
-  }
-}
-
-///|
-test "decode_native_ws_message decodes empty text" {
-  match decode_native_ws_message(Text, b"") {
-    Text(s) => inspect(s, content="")
-    Binary(_) => fail("expected text message")
-  }
-}
-
-///|
-test "decode_native_ws_message decodes empty binary" {
-  match decode_native_ws_message(Binary, b"") {
-    Binary(b) => inspect(b.length(), content="0")
-    Text(_) => fail("expected binary message")
-  }
-}
-
-///|
-test "next_native_ws_message_chunk_size returns 1024 when remaining is large" {
-  inspect(next_native_ws_message_chunk_size(4096, 0), content="1024")
-  inspect(next_native_ws_message_chunk_size(4096, 1024), content="1024")
-  inspect(next_native_ws_message_chunk_size(4096, 2048), content="1024")
-}
-
-///|
-test "next_native_ws_message_chunk_size returns 1024 when remaining is exactly 1024" {
-  inspect(next_native_ws_message_chunk_size(2048, 1024), content="1024")
-}
-
-///|
-test "next_native_ws_message_chunk_size returns remaining plus 1 when under 1024" {
-  inspect(next_native_ws_message_chunk_size(1000, 500), content="501")
-  inspect(next_native_ws_message_chunk_size(100, 90), content="11")
-  inspect(next_native_ws_message_chunk_size(1, 0), content="2")
-}
-
-///|
-test "native_ws_chunk_exceeds_limit detects exceeding limit" {
-  inspect(native_ws_chunk_exceeds_limit(100, 90, 11), content="true")
-  inspect(native_ws_chunk_exceeds_limit(100, 90, 10), content="false")
-  inspect(native_ws_chunk_exceeds_limit(100, 90, 9), content="false")
-  inspect(native_ws_chunk_exceeds_limit(100, 0, 101), content="true")
-  inspect(native_ws_chunk_exceeds_limit(100, 0, 100), content="false")
-}
-
-///|
-test "cleanup_native_ws_runtime removes all connections for runtime" {
-  let runtime_id = "test-cleanup-runtime"
-  let outgoing1 = @async.Queue::new(kind=Blocking(10))
-  let outgoing2 = @async.Queue::new(kind=Blocking(10))
-  register_native_ws_connection(
-    runtime_id,
-    "test-cleanup-runtime:1",
-    outgoing1,
-    DropOldest,
-  )
-  register_native_ws_connection(
-    runtime_id,
-    "test-cleanup-runtime:2",
-    outgoing2,
-    DropOldest,
-  )
-  ws_subscribe("test-cleanup-runtime:1", "room")
-  ws_subscribe("test-cleanup-runtime:2", "room")
-  inspect(
-    native_ws_channel_member_count_in_runtime(runtime_id, "room"),
-    content="2",
-  )
-  inspect(native_ws_connection_exists("test-cleanup-runtime:1"), content="true")
-  inspect(native_ws_connection_exists("test-cleanup-runtime:2"), content="true")
-  cleanup_native_ws_runtime(runtime_id)
-  inspect(
-    native_ws_connection_exists("test-cleanup-runtime:1"),
-    content="false",
-  )
-  inspect(
-    native_ws_connection_exists("test-cleanup-runtime:2"),
-    content="false",
-  )
-  inspect(native_ws_hubs.get(runtime_id) is Some(_), content="false")
-}
-
-///|
-test "cleanup_native_ws_runtime is safe on nonexistent runtime" {
-  cleanup_native_ws_runtime("nonexistent-runtime-id")
-}
-
-///|
-test "multiple connections share same hub channel" {
-  let runtime_id = "test-shared-channel"
-  let outgoing1 = @async.Queue::new(kind=Blocking(10))
-  let outgoing2 = @async.Queue::new(kind=Blocking(10))
-  register_native_ws_connection(
-    runtime_id,
-    "test-shared-channel:1",
-    outgoing1,
-    DropOldest,
-  )
-  register_native_ws_connection(
-    runtime_id,
-    "test-shared-channel:2",
-    outgoing2,
-    DropOldest,
-  )
-  ws_subscribe("test-shared-channel:1", "shared-room")
-  ws_subscribe("test-shared-channel:2", "shared-room")
-  inspect(
-    native_ws_channel_member_count_in_runtime(runtime_id, "shared-room"),
-    content="2",
-  )
-  ws_unsubscribe("test-shared-channel:1", "shared-room")
-  inspect(
-    native_ws_channel_member_count_in_runtime(runtime_id, "shared-room"),
-    content="1",
-  )
-  ws_unsubscribe("test-shared-channel:2", "shared-room")
-  inspect(
-    native_ws_channel_member_count_in_runtime(runtime_id, "shared-room"),
-    content="0",
-  )
-  cleanup_native_ws_runtime(runtime_id)
-}
+// Pure-internal whitebox tests (ensure_native_ws_hub, register_native_ws_connection,
+// ws_subscribe, decode_native_ws_message, chunk-size helpers, cleanup) moved to
+// websocket/runtime_wbtest.mbt for direct access to private hub state.
