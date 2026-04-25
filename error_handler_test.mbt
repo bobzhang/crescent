@@ -98,6 +98,45 @@ async test "group not_found_handler normalizes a trailing slash on the prefix" {
 }
 
 ///|
+async test "overlapping nested-prefix groups: longest match wins, order-independent" {
+  // Register the broader /api group before the narrower /api/v1 group.
+  let app1 = @crescent.App()
+  app1.group("/api", group => {
+    group.set_not_found_handler(_ => {
+      @crescent.HttpResponse(status_code=NotFound).body("API 404")
+    })
+  })
+  app1.group("/api/v1", group => {
+    group.set_not_found_handler(_ => {
+      @crescent.HttpResponse(status_code=NotFound).body("V1 404")
+    })
+  })
+  let client1 = @test_client.TestClient(app1)
+  // /api/v1/x is under both prefixes — narrower /api/v1 should win.
+  assert_eq(client1.get("/api/v1/x").body_text(), "V1 404")
+  // /api/x is only under /api.
+  assert_eq(client1.get("/api/x").body_text(), "API 404")
+
+  // Same setup but with the registration order reversed: behavior should
+  // be identical because we resolve by longest prefix match, not insertion
+  // order.
+  let app2 = @crescent.App()
+  app2.group("/api/v1", group => {
+    group.set_not_found_handler(_ => {
+      @crescent.HttpResponse(status_code=NotFound).body("V1 404")
+    })
+  })
+  app2.group("/api", group => {
+    group.set_not_found_handler(_ => {
+      @crescent.HttpResponse(status_code=NotFound).body("API 404")
+    })
+  })
+  let client2 = @test_client.TestClient(app2)
+  assert_eq(client2.get("/api/v1/x").body_text(), "V1 404")
+  assert_eq(client2.get("/api/x").body_text(), "API 404")
+}
+
+///|
 async test "sibling groups each get their own not_found_handler" {
   let app = @crescent.App()
   app.group("/api", group => {

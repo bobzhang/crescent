@@ -23,8 +23,14 @@ pub struct App {
   priv ws_dynamic_routes : @router.RadixRouter[WebSocketHandler]
   /// Unique ID scoping the native WebSocket hub for this app instance.
   priv ws_runtime_id : String
-  /// Custom handler for URLs that match no registered route.
+  /// Catch-all handler for URLs that match no registered route, set via
+  /// `set_not_found_handler`. Tried after the scoped list below misses.
   priv mut not_found_handler : HttpHandler?
+  /// Path-scoped not-found handlers contributed by `App::group` merges,
+  /// stored as `(absolute_prefix, handler)`. At dispatch time the
+  /// longest matching prefix wins, so `/api/v1` beats `/api` regardless
+  /// of registration order.
+  priv scoped_not_found_handlers : Array[(String, HttpHandler)]
 }
 
 ///|
@@ -49,6 +55,7 @@ pub fn App::App(base_path? : String = "") -> App {
     ws_dynamic_routes: RadixRouter(),
     ws_runtime_id: next_app_instance_id(),
     not_found_handler: None,
+    scoped_not_found_handlers: [],
   }
 }
 
@@ -185,26 +192,44 @@ pub fn App::group(
   self.ws_dynamic_routes.merge(group.ws_dynamic_routes)
   // Merge middlewares
   self.middlewares.append(group.middlewares)
-  // Merge not_found_handler. The group's handler is path-scoped: it fires
-  // only for requests under the group's prefix. Outside the prefix, fall
-  // back to the parent's prior handler (or the default 404). Use
-  // path_scope_matches so /apicore does NOT match a /api group, and
-  // normalize a trailing-slash group prefix so /api/ and /api are
-  // treated equivalently.
+  // Merge scoped not_found handlers from the group, plus the group's own
+  // not_found_handler if set. Each entry stores the absolute prefix so
+  // the dispatcher can pick the longest match independent of registration
+  // order: with /api and /api/v1 both registered, /api/v1/missing fires
+  // the /api/v1 handler regardless of which group was merged first.
+  for entry in group.scoped_not_found_handlers {
+    self.scoped_not_found_handlers.push(entry)
+  }
   if group.not_found_handler is Some(group_handler) {
-    let parent_handler = self.not_found_handler
     let group_prefix = normalize_middleware_base_path(group.base_path)
-    let default_handler = handle_not_found()
-    self.not_found_handler = Some(event => {
-      if @httputil.path_scope_matches(group_prefix, event.req.path()) {
-        group_handler(event)
-      } else {
-        match parent_handler {
-          Some(parent) => parent(event)
-          None => default_handler(event)
-        }
+    self.scoped_not_found_handlers.push((group_prefix, group_handler))
+  }
+}
+
+///|
+/// Resolves the not-found handler for a request path: longest-matching
+/// scoped handler wins, then the catch-all from `set_not_found_handler`,
+/// then the framework default. Used by both live serving and synthetic
+/// dispatch so the two stay aligned.
+fn App::resolve_not_found_handler(self : App, path : String) -> HttpHandler {
+  let mut best : (Int, HttpHandler)? = None
+  for entry in self.scoped_not_found_handlers {
+    let (prefix, handler) = entry
+    if @httputil.path_scope_matches(prefix, path) {
+      let score = prefix.length()
+      match best {
+        Some((best_score, _)) if best_score >= score => ()
+        _ => best = Some((score, handler))
       }
-    })
+    }
+  }
+  match best {
+    Some((_, handler)) => handler
+    None =>
+      match self.not_found_handler {
+        Some(handler) => handler
+        None => handle_not_found()
+      }
   }
 }
 
@@ -215,9 +240,11 @@ pub fn App::set_not_found_handler(self : App, handler : HttpHandler) -> Unit {
 }
 
 ///|
-/// Returns true if a custom not-found handler has been registered.
+/// Returns true if any custom not-found handler has been registered,
+/// either as the catch-all via `set_not_found_handler` or via a group.
 pub fn App::has_not_found_handler(self : App) -> Bool {
-  self.not_found_handler is Some(_)
+  self.not_found_handler is Some(_) ||
+  !self.scoped_not_found_handlers.is_empty()
 }
 
 ///|

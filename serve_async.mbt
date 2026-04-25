@@ -383,11 +383,7 @@ async fn App::handle_request(
     Found(matched_handler, matched_params) => (matched_params, matched_handler)
     MethodNotAllowed(allow) => ({}, method_not_allowed_handler(allow))
     Options(allow) => ({}, options_handler(allow))
-    NotFound =>
-      match self.not_found_handler {
-        Some(handler) => ({}, handler)
-        None => ({}, handle_not_found())
-      }
+    NotFound => ({}, self.resolve_not_found_handler(request_path))
   }
 
   // -------------------------------------------------------------------------
