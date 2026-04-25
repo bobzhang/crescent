@@ -29,19 +29,7 @@ pub async fn Mocket::dispatch(
   }
   // Execute middleware chain + handler
   let responder = execute_middlewares(self.middlewares, event, handler)
-  // Apply responder to response
-  responder.options(event.res)
-  match responder.output_bytes() {
-    Some(bytes) => event.res.raw_body = bytes
-    None => {
-      let buf = @buffer.new()
-      responder.output(buf)
-      event.res.raw_body = buf.to_bytes()
-    }
-  }
-  // Serialize cookies into Set-Cookie headers, matching the live server path
-  // in send_response_async. Without this, TestClient silently drops cookies.
-  append_cookie_headers(event.res.headers, event.res.cookies)
+  finalize_response_body(event.res, responder)
   // HEAD responses carry headers but no body bytes on the wire. Match the
   // live send_raw_response_async path: synthesize Content-Length from the
   // materialized body (unless the handler already set it), THEN drop the

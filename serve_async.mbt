@@ -376,9 +376,12 @@ fn Mocket::lookup_http_route(
 }
 
 ///|
-async fn send_response_async(
-  request : @http.Request,
-  conn : @http.ServerConnection,
+/// Applies a responder to a response and serializes pending cookies into
+/// `Set-Cookie` headers. Shared by the live serving path
+/// (`send_response_async`) and synthetic dispatch (`Mocket::dispatch`) so the
+/// two stay aligned: any bug in body materialization or cookie serialization
+/// would otherwise have to be fixed twice (see commits bb22108, eb6f24b).
+fn finalize_response_body(
   response : HttpResponse,
   responder : &Responder,
 ) -> Unit {
@@ -392,9 +395,18 @@ async fn send_response_async(
       response.raw_body = buffer.to_bytes()
     }
   }
-  // Use response headers directly, append cookies in-place
+  append_cookie_headers(response.headers, response.cookies)
+}
+
+///|
+async fn send_response_async(
+  request : @http.Request,
+  conn : @http.ServerConnection,
+  response : HttpResponse,
+  responder : &Responder,
+) -> Unit {
+  finalize_response_body(response, responder)
   let headers = response.headers
-  append_cookie_headers(headers, response.cookies)
   if !@httputil.has_header_case_insensitive(headers, "Date") {
     headers.set("Date", current_http_date())
   }
