@@ -59,3 +59,59 @@ async test "group not_found_handler chains to parent app handler outside prefix"
   let outside = client.get("/random/path")
   assert_eq(outside.body_text(), "App 404")
 }
+
+///|
+async test "group not_found_handler respects segment boundary, /apicore is not under /api" {
+  let app = @crescent.App()
+  app.group("/api", group => {
+    group.set_not_found_handler(_ => {
+      @crescent.HttpResponse(status_code=NotFound).body("API 404")
+    })
+  })
+  let client = @test_client.TestClient(app)
+  // Confusingly-prefixed path that shares characters with /api but is a
+  // different first segment: must NOT trigger the API handler.
+  let confusing = client.get("/apicore/x")
+  assert_eq(confusing.body_text(), "Not Found")
+  // Exact-prefix request still hits the group handler.
+  let exact = client.get("/api")
+  assert_eq(exact.body_text(), "API 404")
+}
+
+///|
+async test "group not_found_handler normalizes a trailing slash on the prefix" {
+  let app = @crescent.App()
+  app.group("/api/", group => {
+    group.set_not_found_handler(_ => {
+      @crescent.HttpResponse(status_code=NotFound).body("API 404")
+    })
+  })
+  let client = @test_client.TestClient(app)
+  // Both /api and /api/users should match the group, despite the registered
+  // prefix being declared with a trailing slash.
+  let bare = client.get("/api")
+  assert_eq(bare.body_text(), "API 404")
+  let nested = client.get("/api/users")
+  assert_eq(nested.body_text(), "API 404")
+  let outside = client.get("/other")
+  assert_eq(outside.body_text(), "Not Found")
+}
+
+///|
+async test "sibling groups each get their own not_found_handler" {
+  let app = @crescent.App()
+  app.group("/api", group => {
+    group.set_not_found_handler(_ => {
+      @crescent.HttpResponse(status_code=NotFound).body("API 404")
+    })
+  })
+  app.group("/admin", group => {
+    group.set_not_found_handler(_ => {
+      @crescent.HttpResponse(status_code=NotFound).body("Admin 404")
+    })
+  })
+  let client = @test_client.TestClient(app)
+  assert_eq(client.get("/api/x").body_text(), "API 404")
+  assert_eq(client.get("/admin/x").body_text(), "Admin 404")
+  assert_eq(client.get("/random").body_text(), "Not Found")
+}

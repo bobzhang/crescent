@@ -185,17 +185,18 @@ pub fn App::group(
   self.ws_dynamic_routes.merge(group.ws_dynamic_routes)
   // Merge middlewares
   self.middlewares.append(group.middlewares)
-  // Merge not_found_handler. The group's handler is path-scoped: it should
-  // only fire for requests that fall under the group's prefix. Outside the
-  // prefix, fall back to the parent's prior handler (or the default 404).
-  // Without this scoping, a group's 404 would silently take over for all
-  // unmatched paths app-wide.
+  // Merge not_found_handler. The group's handler is path-scoped: it fires
+  // only for requests under the group's prefix. Outside the prefix, fall
+  // back to the parent's prior handler (or the default 404). Use
+  // path_scope_matches so /apicore does NOT match a /api group, and
+  // normalize a trailing-slash group prefix so /api/ and /api are
+  // treated equivalently.
   if group.not_found_handler is Some(group_handler) {
     let parent_handler = self.not_found_handler
-    let group_prefix = group.base_path
+    let group_prefix = normalize_middleware_base_path(group.base_path)
     let default_handler = handle_not_found()
     self.not_found_handler = Some(event => {
-      if event.req.path().has_prefix(group_prefix) {
+      if @httputil.path_scope_matches(group_prefix, event.req.path()) {
         group_handler(event)
       } else {
         match parent_handler {
