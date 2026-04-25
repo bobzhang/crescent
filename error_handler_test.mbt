@@ -137,6 +137,23 @@ async test "overlapping nested-prefix groups: longest match wins, order-independ
 }
 
 ///|
+async test "two groups at the same prefix: later registration wins" {
+  let app = @crescent.App()
+  app.group("/api", group => {
+    group.set_not_found_handler(_ => {
+      @crescent.HttpResponse(status_code=NotFound).body("first")
+    })
+  })
+  app.group("/api", group => {
+    group.set_not_found_handler(_ => {
+      @crescent.HttpResponse(status_code=NotFound).body("second")
+    })
+  })
+  let client = @test_client.TestClient(app)
+  assert_eq(client.get("/api/x").body_text(), "second")
+}
+
+///|
 async test "sibling groups each get their own not_found_handler" {
   let app = @crescent.App()
   app.group("/api", group => {

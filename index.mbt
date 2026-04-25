@@ -217,8 +217,11 @@ fn App::resolve_not_found_handler(self : App, path : String) -> HttpHandler {
     let (prefix, handler) = entry
     if @httputil.path_scope_matches(prefix, path) {
       let score = prefix.length()
+      // Strict > so two groups at the same prefix follow later-wins
+      // semantics (same as overwriting a key in a Map): the most recently
+      // registered handler at that prefix takes precedence.
       match best {
-        Some((best_score, _)) if best_score >= score => ()
+        Some((best_score, _)) if best_score > score => ()
         _ => best = Some((score, handler))
       }
     }
