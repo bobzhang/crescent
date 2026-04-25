@@ -2,7 +2,7 @@
 
 > **Crescent** (`bobzhang/crescent`) is a native-first, type-safe, async HTTP and
 > WebSocket server framework for [MoonBit](https://docs.moonbitlang.com). Version
-> 0.8.8. Apache-2.0 licensed.
+> 0.9.0. Apache-2.0 licensed.
 
 This document explains the architecture of the Crescent codebase from the ground
 up. It assumes you are a strong programmer but does not assume familiarity with
@@ -202,7 +202,7 @@ system calls for I/O.
 
 ## 3. High-Level Architecture
 
-Crescent is a MoonBit module with a root package and eight sub-packages.
+Crescent is a MoonBit module with a root package and ten sub-packages.
 
 ```mermaid
 graph TB
@@ -533,7 +533,7 @@ classDiagram
 
 ## 7. The Mocket Application
 
-**File:** `index.mbt` (254 lines)
+**File:** `index.mbt` (258 lines)
 
 `Mocket` is the central orchestrator. Think of it as a routing table combined
 with a middleware stack. Its internal state is split by access pattern for
@@ -597,7 +597,7 @@ function runs, everything is flattened into the parent's data structures.
 ## 8. Routing: Mapping URLs to Code
 
 **Directory:** `router/`
-**Files:** `route_pattern.mbt` (159 lines), `radix_tree.mbt` (377 lines)
+**Files:** `route_pattern.mbt` (159 lines), `radix_tree.mbt` (376 lines)
 **Dependencies:** None (leaf package -- no imports at all)
 
 Routing is the process of taking a URL path like `/users/42/posts` and finding
@@ -695,7 +695,7 @@ and matched via linear scan during dispatch.
 
 ## 9. Middleware: Cross-Cutting Concerns
 
-**File:** `middleware.mbt` (231 lines)
+**File:** `middleware.mbt` (233 lines)
 
 ### The Problem Middleware Solves
 
@@ -952,7 +952,7 @@ filename, content-type) and body. `parse_multipart()` parses this format into
 
 ## 13. WebSocket: Persistent Bidirectional Channels
 
-**Files:** `websocket.mbt` (109 lines), `websocket_async.mbt` (496 lines)
+**Files:** `websocket.mbt` (107 lines), `websocket_async.mbt` (591 lines)
 
 ### Why WebSocket?
 
@@ -1245,7 +1245,7 @@ middleware ordering, response serialization, and error mapping in milliseconds.
 | Source files (`.mbt`)         | ~80     |
 | Lines of code (approx.)      | ~19,000 |
 | Lines of test code (approx.) | ~9,000  |
-| Internal packages             | 8       |
+| Internal packages             | 10      |
 | External dependencies         | 2       |
 | Public traits                 | 3       |
 | Public structs                | 16      |
@@ -1264,8 +1264,8 @@ responsibility:
 
 | File                         | Lines | Responsibility                                |
 |------------------------------|-------|-----------------------------------------------|
-| `index.mbt`                  | 260   | `Mocket` struct, route registration, groups   |
-| `dispatch.mbt`               | 43    | `dispatch()` -- synthetic request pipeline    |
+| `index.mbt`                  | 258   | `Mocket` struct, route registration, groups   |
+| `dispatch.mbt`               | 52    | `dispatch()` -- synthetic request pipeline    |
 | `handler.mbt`                | 3     | `HttpHandler` type alias                      |
 | `middleware.mbt`             | 233   | `Middleware` type, onion chain execution      |
 | `event.mbt`                  | 33    | `MocketEvent` struct, JSON/param helpers      |
@@ -1273,12 +1273,12 @@ responsibility:
 | `path_match.mbt`             | 342   | Route lookup, allowed methods, WS routing     |
 | `param.mbt`                  | 112   | Route parameter extraction helpers            |
 | `not_found.mbt`              | 4     | Default 404 handler                           |
-| `resource.mbt`               | 63    | RESTful `resource()` CRUD registration        |
-| `static.mbt`                 | 454   | `ServeStaticProvider` trait, asset serving    |
-| `websocket.mbt`              | 112   | `WebSocketPeer`, events, handler type         |
-| `websocket_async.mbt`        | 496   | Native WS hub, pub/sub, connection mgmt       |
-| `serve_options.mbt`          | 267   | `NativeServeOptions`, validation              |
-| `serve_async.mbt`            | 946   | Native server runtime, connection handling    |
+| `resource.mbt`               | 55    | RESTful `resource()` CRUD registration        |
+| `static.mbt`                 | 445   | `ServeStaticProvider` trait, asset serving    |
+| `websocket.mbt`              | 107   | `WebSocketPeer`, events, handler type         |
+| `websocket_async.mbt`        | 591   | Native WS hub, pub/sub, connection mgmt       |
+| `serve_options.mbt`          | 259   | `NativeServeOptions`, validation              |
+| `serve_async.mbt`            | 1027  | Native server runtime, connection handling    |
 | `error.mbt`                  | 11    | Error type definitions                        |
 | `core_reexports.mbt`         | 12    | Re-exports from `core/` for back-compat       |
 | ~~`request.mbt`~~            |       | *(moved to `core/` sub-package)*              |
