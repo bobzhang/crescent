@@ -1,8 +1,8 @@
 ///|
 /// Dispatches a synthetic HTTP request through the full routing + middleware
 /// pipeline and returns `(status_code, headers, body_bytes)`.
-pub async fn Mocket::dispatch(
-  self : Mocket,
+pub async fn App::dispatch(
+  self : App,
   http_method : String,
   url : String,
   headers : Map[String, String],

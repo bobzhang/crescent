@@ -9,7 +9,7 @@ struct Person {
 
 ///|
 async fn main {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
 
   // Text Response
   app

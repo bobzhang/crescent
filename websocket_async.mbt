@@ -421,7 +421,7 @@ fn normalize_native_websocket_request(request : @http.Request) -> @http.Request 
 /// registration, the `Open → Message* → Close` user-handler lifecycle,
 /// and cleanup.
 ///
-/// Called by `Mocket::handle_request`'s WebSocket dispatch branch. Unlike
+/// Called by `App::handle_request`'s WebSocket dispatch branch. Unlike
 /// HTTP `handle_request` (which runs once per request), this function is
 /// long-lived — it returns only when the peer loop exits (client close,
 /// read timeout, oversized message) or when the enclosing task group is

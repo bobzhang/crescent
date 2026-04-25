@@ -5,7 +5,7 @@
 /// - `static_routes` — `Map[method, Map[path, handler]]` for O(1) static lookup
 /// - `dynamic_routes` — radix tree for O(path_length) dynamic lookup
 /// - `route_keys` — flat list of `(method, path)` for introspection via `routes()`
-pub struct Mocket {
+pub struct App {
   /// Path prefix prepended to all routes in this app/group.
   priv base_path : String
   /// Flat list of `(method, path)` for introspection via `routes()`.
@@ -28,17 +28,17 @@ pub struct Mocket {
 }
 
 ///|
-let mocket_instance_counter : Ref[Int] = Ref(0)
+let app_instance_counter : Ref[Int] = Ref(0)
 
 ///|
-fn next_mocket_instance_id() -> String {
-  mocket_instance_counter.val += 1
-  "mocket-\{mocket_instance_counter.val}"
+fn next_app_instance_id() -> String {
+  app_instance_counter.val += 1
+  "app-\{app_instance_counter.val}"
 }
 
 ///|
-/// Creates a new Mocket application instance with an optional base path prefix.
-pub fn Mocket::Mocket(base_path? : String = "") -> Mocket {
+/// Creates a new App application instance with an optional base path prefix.
+pub fn App::App(base_path? : String = "") -> App {
   {
     base_path,
     route_keys: [],
@@ -47,21 +47,21 @@ pub fn Mocket::Mocket(base_path? : String = "") -> Mocket {
     dynamic_routes: RadixRouter(),
     ws_static_routes: {},
     ws_dynamic_routes: RadixRouter(),
-    ws_runtime_id: next_mocket_instance_id(),
+    ws_runtime_id: next_app_instance_id(),
     not_found_handler: None,
   }
 }
 
 ///|
 /// Returns an iterator over the registered route keys as `(method, path)` pairs.
-pub fn Mocket::routes(self : Mocket) -> Iter[(String, String)] {
+pub fn App::routes(self : App) -> Iter[(String, String)] {
   self.route_keys.iter()
 }
 
 ///|
 /// Registers a route handler for the given HTTP method and path.
-pub fn Mocket::on(
-  self : Mocket,
+pub fn App::on(
+  self : App,
   event : String,
   path : String,
   handler : HttpHandler,
@@ -89,38 +89,26 @@ pub fn Mocket::on(
 
 ///|
 /// Registers a noraise GET handler. For most use cases, prefer `get()`.
-pub fn Mocket::get_raw(
-  self : Mocket,
-  path : String,
-  handler : HttpHandler,
-) -> Unit {
+pub fn App::get_raw(self : App, path : String, handler : HttpHandler) -> Unit {
   self.on("GET", path, handler)
 }
 
 ///|
 /// Registers a noraise POST handler.
-pub fn Mocket::post_raw(
-  self : Mocket,
-  path : String,
-  handler : HttpHandler,
-) -> Unit {
+pub fn App::post_raw(self : App, path : String, handler : HttpHandler) -> Unit {
   self.on("POST", path, handler)
 }
 
 ///|
 /// Registers a noraise PATCH handler.
-pub fn Mocket::patch_raw(
-  self : Mocket,
-  path : String,
-  handler : HttpHandler,
-) -> Unit {
+pub fn App::patch_raw(self : App, path : String, handler : HttpHandler) -> Unit {
   self.on("PATCH", path, handler)
 }
 
 ///|
 /// Registers a noraise CONNECT handler.
-pub fn Mocket::connect_raw(
-  self : Mocket,
+pub fn App::connect_raw(
+  self : App,
   path : String,
   handler : HttpHandler,
 ) -> Unit {
@@ -129,18 +117,14 @@ pub fn Mocket::connect_raw(
 
 ///|
 /// Registers a noraise PUT handler.
-pub fn Mocket::put_raw(
-  self : Mocket,
-  path : String,
-  handler : HttpHandler,
-) -> Unit {
+pub fn App::put_raw(self : App, path : String, handler : HttpHandler) -> Unit {
   self.on("PUT", path, handler)
 }
 
 ///|
 /// Registers a noraise DELETE handler.
-pub fn Mocket::delete_raw(
-  self : Mocket,
+pub fn App::delete_raw(
+  self : App,
   path : String,
   handler : HttpHandler,
 ) -> Unit {
@@ -149,18 +133,14 @@ pub fn Mocket::delete_raw(
 
 ///|
 /// Registers a noraise HEAD handler.
-pub fn Mocket::head_raw(
-  self : Mocket,
-  path : String,
-  handler : HttpHandler,
-) -> Unit {
+pub fn App::head_raw(self : App, path : String, handler : HttpHandler) -> Unit {
   self.on("HEAD", path, handler)
 }
 
 ///|
 /// Registers a noraise OPTIONS handler.
-pub fn Mocket::options_raw(
-  self : Mocket,
+pub fn App::options_raw(
+  self : App,
   path : String,
   handler : HttpHandler,
 ) -> Unit {
@@ -169,32 +149,24 @@ pub fn Mocket::options_raw(
 
 ///|
 /// Registers a noraise TRACE handler.
-pub fn Mocket::trace_raw(
-  self : Mocket,
-  path : String,
-  handler : HttpHandler,
-) -> Unit {
+pub fn App::trace_raw(self : App, path : String, handler : HttpHandler) -> Unit {
   self.on("TRACE", path, handler)
 }
 
 ///|
 /// Registers a noraise handler that matches all HTTP methods.
-pub fn Mocket::all_raw(
-  self : Mocket,
-  path : String,
-  handler : HttpHandler,
-) -> Unit {
+pub fn App::all_raw(self : App, path : String, handler : HttpHandler) -> Unit {
   self.on("*", path, handler)
 }
 
 ///|
 /// Creates a route group with a shared base path prefix, merging its routes and middleware into the app.
-pub fn Mocket::group(
-  self : Mocket,
+pub fn App::group(
+  self : App,
   base_path : String,
-  configure : (Mocket) -> Unit,
+  configure : (App) -> Unit,
 ) -> Unit {
-  let group = Mocket(base_path=self.base_path + base_path)
+  let group = App(base_path=self.base_path + base_path)
   configure(group)
   // Merge route keys for introspection
   self.route_keys.append(group.route_keys)
@@ -221,16 +193,13 @@ pub fn Mocket::group(
 
 ///|
 /// Sets a custom handler for 404 Not Found responses.
-pub fn Mocket::set_not_found_handler(
-  self : Mocket,
-  handler : HttpHandler,
-) -> Unit {
+pub fn App::set_not_found_handler(self : App, handler : HttpHandler) -> Unit {
   self.not_found_handler = Some(handler)
 }
 
 ///|
 /// Returns true if a custom not-found handler has been registered.
-pub fn Mocket::has_not_found_handler(self : Mocket) -> Bool {
+pub fn App::has_not_found_handler(self : App) -> Bool {
   self.not_found_handler is Some(_)
 }
 
@@ -241,11 +210,7 @@ pub fn Mocket::has_not_found_handler(self : Mocket) -> Bool {
 /// tree implementation used for HTTP routes, giving them consistent precedence:
 /// static > param > wildcard > globstar. Re-registering the same path overrides
 /// the previous handler.
-pub fn Mocket::ws(
-  self : Mocket,
-  path : String,
-  handler : WebSocketHandler,
-) -> Unit {
+pub fn App::ws(self : App, path : String, handler : WebSocketHandler) -> Unit {
   let path = self.base_path + path
   // Static path: direct map lookup
   if !path.contains(":") && !path.contains("*") {

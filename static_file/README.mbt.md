@@ -14,7 +14,7 @@ for non-filesystem sources (embedded assets, S3, in-memory caches).
 ```moonbit nocheck
 ///|
 async fn main {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.static_assets("/assets", @static_file.StaticFileProvider(path="./public"))
   app.serve(port=4000)
 }

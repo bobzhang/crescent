@@ -2,33 +2,33 @@
 /// Configuration for registering a RESTful resource with standard CRUD routes.
 pub struct ResourceConfig {
   /// GET /path — list all resources
-  list : (async (MocketEvent) -> &Responder)?
+  list : (async (Event) -> &Responder)?
   /// GET /path/:id — get a single resource by ID
-  get : (async (MocketEvent) -> &Responder)?
+  get : (async (Event) -> &Responder)?
   /// POST /path — create a new resource
-  create : (async (MocketEvent) -> &Responder)?
+  create : (async (Event) -> &Responder)?
   /// PUT /path/:id — update an existing resource
-  update : (async (MocketEvent) -> &Responder)?
+  update : (async (Event) -> &Responder)?
   /// DELETE /path/:id — delete a resource
-  delete : (async (MocketEvent) -> &Responder)?
+  delete : (async (Event) -> &Responder)?
 }
 
 ///|
 /// Creates a new `ResourceConfig` with optional CRUD handlers.
 pub fn ResourceConfig::ResourceConfig(
-  list? : async (MocketEvent) -> &Responder,
-  get? : async (MocketEvent) -> &Responder,
-  create? : async (MocketEvent) -> &Responder,
-  update? : async (MocketEvent) -> &Responder,
-  delete? : async (MocketEvent) -> &Responder,
+  list? : async (Event) -> &Responder,
+  get? : async (Event) -> &Responder,
+  create? : async (Event) -> &Responder,
+  update? : async (Event) -> &Responder,
+  delete? : async (Event) -> &Responder,
 ) -> ResourceConfig {
   { list, get, create, update, delete }
 }
 
 ///|
 /// Registers standard REST routes (list, get, create, update, delete) for a resource path.
-pub fn Mocket::resource(
-  self : Mocket,
+pub fn App::resource(
+  self : App,
   path : String,
   config : ResourceConfig,
 ) -> Unit {

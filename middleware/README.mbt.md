@@ -49,7 +49,7 @@ first middleware registered wraps every later one:
 ```moonbit nocheck
 ///|
 async fn main {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(@middleware.request_id()) // outermost: IDs are set first
   app.use_middleware(@middleware.security_headers())
   app.use_middleware(
@@ -71,7 +71,7 @@ seconds until the window resets.
 ```mbt check
 ///|
 async test "rate_limit allows traffic under the budget" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(
     @middleware.rate_limit(requests_per_window=3, window_ms=10000),
   )
@@ -89,7 +89,7 @@ not called and the response is returned directly:
 ```mbt check
 ///|
 async test "rate_limit returns 429 with Retry-After" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(
     @middleware.rate_limit(requests_per_window=1, window_ms=10000),
   )
@@ -127,7 +127,7 @@ services and log streams.
 ```mbt check
 ///|
 async test "request_id adds an opaque hex id" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(@middleware.request_id())
   app.get("/hello", _ => "hi")
   let client = @test_client.TestClient(app)
@@ -144,7 +144,7 @@ upstream load balancer, ingress, or sibling service), its value is
 ```mbt check
 ///|
 async test "request_id preserves an upstream-assigned id" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(@middleware.request_id())
   app.get("/hello", _ => "hi")
   let client = @test_client.TestClient(app)
@@ -163,7 +163,7 @@ IDs:
 ```mbt check
 ///|
 async test "handler can read the request id via event.request_id()" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(@middleware.request_id())
   app.get("/whoami", event => {
     match event.request_id() {
@@ -199,7 +199,7 @@ every response. Four base headers are always applied as safe defaults:
 ```mbt check
 ///|
 async test "security_headers sets base headers" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(@middleware.security_headers())
   app.get("/", _ => "ok")
   let client = @test_client.TestClient(app)
@@ -232,7 +232,7 @@ content — a too-strict default would silently break existing apps.
 ```mbt check
 ///|
 async test "security_headers with opt-in policy headers" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(
     @middleware.security_headers(
       hsts="max-age=31536000; includeSubDomains",
@@ -265,7 +265,7 @@ it alone:
 ```mbt check
 ///|
 async test "handler-set headers override middleware defaults" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(@middleware.security_headers(csp="default-src 'self'"))
   app.get("/embed", event => {
     // This route sandboxes an embed — lock it down further than the default.

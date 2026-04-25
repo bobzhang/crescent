@@ -1,6 +1,6 @@
 ///|
 async test "test client GET returns text" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/hello", _ => "Hello!")
   let client = @test_client.TestClient(app)
   let res = client.get("/hello")
@@ -13,7 +13,7 @@ async test "test client GET returns text" {
 
 ///|
 async test "test client GET returns json" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/data", _ => ({ "key": "value" } : Json))
   let client = @test_client.TestClient(app)
   let res = client.get("/data")
@@ -26,7 +26,7 @@ async test "test client GET returns json" {
 
 ///|
 async test "test client POST with body" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.post("/echo", event => {
     let text : String = event.req.body() catch { _ => "error" }
     text
@@ -39,7 +39,7 @@ async test "test client POST with body" {
 
 ///|
 async test "test client route params" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/users/:id", event => event.param("id").unwrap_or("?"))
   let client = @test_client.TestClient(app)
   let res = client.get("/users/42")
@@ -49,7 +49,7 @@ async test "test client route params" {
 
 ///|
 async test "test client 404 for missing route" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/exists", _ => "ok")
   let client = @test_client.TestClient(app)
   let res = client.get("/missing")
@@ -58,7 +58,7 @@ async test "test client 404 for missing route" {
 
 ///|
 async test "test client custom not found handler" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.set_not_found_handler(_ => {
     @crescent.HttpResponse::not_found().body("custom 404")
   })
@@ -75,7 +75,7 @@ async test "test client runs middleware" {
   // dispatches requests through the middleware chain, not that any
   // particular middleware behaves correctly.
   let mut ran = false
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware((_event, next) => {
     ran = true
     next()
@@ -89,7 +89,7 @@ async test "test client runs middleware" {
 
 ///|
 async test "test client with error handling handler" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.post("/users", event => {
     let _ : Json = event.req.json()
     "created"
@@ -105,7 +105,7 @@ async test "test client with error handling handler" {
 
 ///|
 async test "test client method not allowed" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/only-get", _ => "ok")
   let client = @test_client.TestClient(app)
   let res = client.post("/only-get")
@@ -114,7 +114,7 @@ async test "test client method not allowed" {
 
 ///|
 async test "test client PUT and DELETE" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.put("/item", _ => "updated")
   app.delete("/item", _ => "deleted")
   let client = @test_client.TestClient(app)
@@ -126,7 +126,7 @@ async test "test client PUT and DELETE" {
 
 ///|
 async test "test client with custom headers" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/auth", event => {
     match event.req.get_header("authorization") {
       Some(token) => "token: " + token
@@ -143,7 +143,7 @@ async test "test client with custom headers" {
 ///|
 async test "test client with path-scoped middleware" {
   let order : Array[String] = []
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(
     (_, next) => {
       order.push("api-mw")

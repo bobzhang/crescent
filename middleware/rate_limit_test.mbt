@@ -1,6 +1,6 @@
 ///|
 async test "rate_limit allows requests within limit" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(rate_limit(requests_per_window=3, window_ms=10000))
   app.get("/test", _ => "ok")
   let client = @test_client.TestClient(app)
@@ -14,7 +14,7 @@ async test "rate_limit allows requests within limit" {
 
 ///|
 async test "rate_limit returns 429 when limit exceeded" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(rate_limit(requests_per_window=2, window_ms=10000))
   app.get("/test", _ => "ok")
   let client = @test_client.TestClient(app)
@@ -27,7 +27,7 @@ async test "rate_limit returns 429 when limit exceeded" {
 
 ///|
 async test "rate_limit resets after window expires" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(rate_limit(requests_per_window=1, window_ms=50))
   app.get("/test", _ => "ok")
   let client = @test_client.TestClient(app)

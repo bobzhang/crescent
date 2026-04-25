@@ -11,7 +11,7 @@ serialization.
 
 The main `bobzhang/crescent` package re-exports everything in this package, so
 application code can use either `@crescent.HttpResponse` or `@core.HttpResponse`
-interchangeably. Sub-packages that want a lighter dependency (no Mocket, no
+interchangeably. Sub-packages that want a lighter dependency (no App, no
 server runtime) can import `bobzhang/crescent/core` directly.
 
 This package provides:

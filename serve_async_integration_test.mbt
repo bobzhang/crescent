@@ -131,16 +131,16 @@ fn localhost_url(port : Int, path : String) -> String {
 ///|
 async fn wait_until_ready(port : Int) -> Unit {
   @async.retry(FixedDelay(20), max_retry=50, () => {
-    let (response, _body) = @http.get(localhost_url(port, "/__mocket_ready"))
+    let (response, _body) = @http.get(localhost_url(port, "/__app_ready"))
     guard response.code == 200 else { raise ServerNotReady }
   })
 }
 
 ///|
-async fn with_test_server(app : Mocket, run_test : async (Int) -> Unit) -> Unit {
+async fn with_test_server(app : App, run_test : async (Int) -> Unit) -> Unit {
   let server = allocate_test_server()
   let port = server.addr.port()
-  app.get("/__mocket_ready", _ => "ready")
+  app.get("/__app_ready", _ => "ready")
   @async.with_task_group(group => {
     group.spawn_bg(no_wait=true, () => app.serve_on(server))
     wait_until_ready(port)
@@ -150,13 +150,13 @@ async fn with_test_server(app : Mocket, run_test : async (Int) -> Unit) -> Unit 
 
 ///|
 async fn with_test_server_options(
-  app : Mocket,
+  app : App,
   options~ : NativeServeOptions,
   run_test : async (Int) -> Unit,
 ) -> Unit {
   let server = allocate_test_server()
   let port = server.addr.port()
-  app.get("/__mocket_ready", _ => "ready")
+  app.get("/__app_ready", _ => "ready")
   @async.with_task_group(group => {
     group.spawn_bg(no_wait=true, () => app.serve_on(server, options~))
     wait_until_ready(port)
@@ -166,10 +166,10 @@ async fn with_test_server_options(
 
 ///|
 async fn with_port_bound_test_server(
-  app : Mocket,
+  app : App,
   run_test : async (Int) -> Unit,
 ) -> Unit {
-  app.get("/__mocket_ready", _ => "ready")
+  app.get("/__app_ready", _ => "ready")
   let start_offset = @async.now().to_int() % 20_000
   for attempt = 0; attempt < 2_048; attempt = attempt + 1 {
     let port = 40_000 + (start_offset + attempt) % 20_000
@@ -225,16 +225,16 @@ async fn with_port_bound_test_server(
 
 ///|
 async fn with_two_test_servers(
-  app1 : Mocket,
-  app2 : Mocket,
+  app1 : App,
+  app2 : App,
   run_test : async (Int, Int) -> Unit,
 ) -> Unit {
   let server1 = allocate_test_server()
   let server2 = allocate_test_server()
   let port1 = server1.addr.port()
   let port2 = server2.addr.port()
-  app1.get("/__mocket_ready", _ => "ready")
-  app2.get("/__mocket_ready", _ => "ready")
+  app1.get("/__app_ready", _ => "ready")
+  app2.get("/__app_ready", _ => "ready")
   @async.with_task_group(group => {
     group.spawn_bg(no_wait=true, () => app1.serve_on(server1))
     group.spawn_bg(no_wait=true, () => app2.serve_on(server2))
@@ -508,7 +508,7 @@ fn raw_header_count(raw_headers : String, header_name : String) -> Int {
 
 ///|
 async test "serve strips query and reads put bodies" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/hello/:name", event => {
     let name = event.params.get("name").unwrap_or("world")
     event.res.headers.set("X-Raw-Url", event.req.url)
@@ -554,23 +554,23 @@ async test "serve strips query and reads put bodies" {
 ///|
 async test "serve preserves middleware onion order" {
   let log : Array[String] = []
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware((event, next) => {
-    if event.req.url != "/__mocket_ready" {
+    if event.req.url != "/__app_ready" {
       log.push("before-1")
     }
     let responder = next()
-    if event.req.url != "/__mocket_ready" {
+    if event.req.url != "/__app_ready" {
       log.push("after-1")
     }
     responder
   })
   app.use_middleware((event, next) => {
-    if event.req.url != "/__mocket_ready" {
+    if event.req.url != "/__app_ready" {
       log.push("before-2")
     }
     let responder = next()
-    if event.req.url != "/__mocket_ready" {
+    if event.req.url != "/__app_ready" {
       log.push("after-2")
     }
     responder
@@ -596,7 +596,7 @@ async test "serve keeps invalid websocket opcodes connection-local and stays hea
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -676,7 +676,7 @@ async test "serve keeps invalid websocket text payloads connection-local and sta
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -751,7 +751,7 @@ async test "serve keeps websocket protocol edge failures connection-local and st
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -852,7 +852,7 @@ async test "serve keeps websocket sequencing and control-size failures connectio
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -943,7 +943,7 @@ async test "serve keeps websocket continuation and length-format failures connec
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1034,7 +1034,7 @@ async test "serve echoes websocket close reasons and stays healthy" {
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1092,7 +1092,7 @@ async test "serve rejects invalid websocket close reasons and stays healthy" {
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1150,7 +1150,7 @@ async test "serve auto-replies to websocket ping frames without leaking control 
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1215,7 +1215,7 @@ async test "serve ignores unsolicited websocket pong frames without leaking cont
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1276,7 +1276,7 @@ async test "serve routes fragmented websocket messages while replying to in-flig
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1359,7 +1359,7 @@ async test "serve replies to multiple websocket pings in order without leaking c
   let closed : Ref[Int] = Ref::new(0)
   let messages : Ref[Int] = Ref::new(0)
   let healthy_hits : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => opened.val += 1
@@ -1448,7 +1448,7 @@ async test "serve replies to multiple websocket pings in order without leaking c
 
 ///|
 async test "serve_on enforces max_connections" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let gate = @async.Queue::new(kind=Unbounded)
   let started : Ref[Int] = Ref::new(0)
   app.get("/serial", _ => {
@@ -1456,7 +1456,7 @@ async test "serve_on enforces max_connections" {
     ignore(try? gate.get())
     "ok"
   })
-  app.get("/__mocket_ready", _ => "ready")
+  app.get("/__app_ready", _ => "ready")
   @async.with_task_group(group => {
     let server = allocate_test_server()
     let port = server.addr.port()
@@ -1520,7 +1520,7 @@ async test "serve_on enforces max_connections" {
 
 ///|
 async test "serve_on rejects non-positive max_connections" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let server = allocate_test_server()
   defer server.close()
   let result : Result[Unit, Error] = try? app.serve_on(
@@ -1536,7 +1536,7 @@ async test "serve_on rejects non-positive max_connections" {
 
 ///|
 async test "serve rejects non-positive max_connections" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let result : Result[Unit, Error] = try? app.serve(
     port=0,
     options=NativeServeOptions(max_connections=0),
@@ -1550,14 +1550,14 @@ async test "serve rejects non-positive max_connections" {
 
 ///|
 async test "serve_on enforces max_request_body_bytes for fixed-length bodies" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let handled : Ref[Int] = Ref::new(0)
   app.post("/body", event => {
     handled.val += 1
     event.req.raw_body
   })
   app.get("/healthy", _ => "ok")
-  app.get("/__mocket_ready", _ => "ready")
+  app.get("/__app_ready", _ => "ready")
   @async.with_task_group(group => {
     let server = allocate_test_server()
     let port = server.addr.port()
@@ -1601,14 +1601,14 @@ async test "serve_on enforces max_request_body_bytes for fixed-length bodies" {
 
 ///|
 async test "serve_on treats max_request_body_bytes=0 as empty-body only" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let handled : Ref[Int] = Ref::new(0)
   app.post("/body", event => {
     handled.val += 1
     event.req.raw_body.length().to_string()
   })
   app.get("/healthy", _ => "ok")
-  app.get("/__mocket_ready", _ => "ready")
+  app.get("/__app_ready", _ => "ready")
   @async.with_task_group(group => {
     let server = allocate_test_server()
     let port = server.addr.port()
@@ -1673,14 +1673,14 @@ async test "serve_on treats max_request_body_bytes=0 as empty-body only" {
 
 ///|
 async test "serve_on enforces max_request_body_bytes for chunked bodies" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let handled : Ref[Int] = Ref::new(0)
   app.post("/body", event => {
     handled.val += 1
     event.req.raw_body
   })
   app.get("/healthy", _ => "ok")
-  app.get("/__mocket_ready", _ => "ready")
+  app.get("/__app_ready", _ => "ready")
   @async.with_task_group(group => {
     let server = allocate_test_server()
     let port = server.addr.port()
@@ -1720,14 +1720,14 @@ async test "serve_on enforces max_request_body_bytes for chunked bodies" {
 
 ///|
 async test "serve_on accepts exact-limit chunked bodies across multiple reads" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let handled : Ref[Int] = Ref::new(0)
   app.post("/body", event => {
     handled.val += 1
     event.req.raw_body.length().to_string()
   })
   app.get("/healthy", _ => "ok")
-  app.get("/__mocket_ready", _ => "ready")
+  app.get("/__app_ready", _ => "ready")
   let chunk1 = repeated_ascii_text("a", 1024)
   let chunk2 = repeated_ascii_text("b", 1024)
   @async.with_task_group(group => {
@@ -1762,7 +1762,7 @@ async test "serve_on accepts exact-limit chunked bodies across multiple reads" {
 
 ///|
 async test "serve_on rejects negative max_request_body_bytes" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let server = allocate_test_server()
   defer server.close()
   let result : Result[Unit, Error] = try? app.serve_on(
@@ -1778,7 +1778,7 @@ async test "serve_on rejects negative max_request_body_bytes" {
 
 ///|
 async test "serve_on_until rejects negative max_request_body_bytes" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let server = allocate_test_server()
   defer server.close()
   let shutdown = @async.Queue::new(kind=Unbounded)
@@ -1797,7 +1797,7 @@ async test "serve_on_until rejects negative max_request_body_bytes" {
 
 ///|
 async test "serve rejects negative max_request_body_bytes" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let result : Result[Unit, Error] = try? app.serve(
     port=0,
     options=NativeServeOptions(max_request_body_bytes=-1),
@@ -1811,7 +1811,7 @@ async test "serve rejects negative max_request_body_bytes" {
 
 ///|
 async test "serve_on rejects non-positive request_body_read_timeout_ms" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let server = allocate_test_server()
   defer server.close()
   let result : Result[Unit, Error] = try? app.serve_on(
@@ -1828,7 +1828,7 @@ async test "serve_on rejects non-positive request_body_read_timeout_ms" {
 
 ///|
 async test "serve_on_until rejects non-positive request_body_read_timeout_ms" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let server = allocate_test_server()
   defer server.close()
   let shutdown = @async.Queue::new(kind=Unbounded)
@@ -1850,7 +1850,7 @@ async test "serve_on_until rejects non-positive request_body_read_timeout_ms" {
 
 ///|
 async test "serve rejects non-positive request_body_read_timeout_ms" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let result : Result[Unit, Error] = try? app.serve(
     port=0,
     options=NativeServeOptions(request_body_read_timeout_ms=0),
@@ -1865,7 +1865,7 @@ async test "serve rejects non-positive request_body_read_timeout_ms" {
 
 ///|
 async test "serve_until rejects non-positive request_body_read_timeout_ms" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve(
     port=0,
@@ -1883,7 +1883,7 @@ async test "serve_until rejects non-positive request_body_read_timeout_ms" {
 
 ///|
 async test "serve_on rejects non-positive websocket_outgoing_queue_capacity" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let server = allocate_test_server()
   defer server.close()
   let result : Result[Unit, Error] = try? app.serve_on(
@@ -1901,7 +1901,7 @@ async test "serve_on rejects non-positive websocket_outgoing_queue_capacity" {
 
 ///|
 async test "serve_on_until rejects non-positive websocket_outgoing_queue_capacity" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let server = allocate_test_server()
   defer server.close()
   let shutdown = @async.Queue::new(kind=Unbounded)
@@ -1925,7 +1925,7 @@ async test "serve_on_until rejects non-positive websocket_outgoing_queue_capacit
 
 ///|
 async test "serve rejects non-positive websocket_outgoing_queue_capacity" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let result : Result[Unit, Error] = try? app.serve(
     port=0,
     options=NativeServeOptions(websocket_outgoing_queue_capacity=0),
@@ -1941,7 +1941,7 @@ async test "serve rejects non-positive websocket_outgoing_queue_capacity" {
 
 ///|
 async test "serve_until rejects non-positive websocket_outgoing_queue_capacity" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve(
     port=0,
@@ -1961,7 +1961,7 @@ async test "serve_until rejects non-positive websocket_outgoing_queue_capacity" 
 
 ///|
 async test "serve_on rejects non-positive websocket_read_timeout_ms" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let server = allocate_test_server()
   defer server.close()
   let result : Result[Unit, Error] = try? app.serve_on(
@@ -1978,7 +1978,7 @@ async test "serve_on rejects non-positive websocket_read_timeout_ms" {
 
 ///|
 async test "serve_on_until rejects non-positive websocket_read_timeout_ms" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let server = allocate_test_server()
   defer server.close()
   let shutdown = @async.Queue::new(kind=Unbounded)
@@ -1998,7 +1998,7 @@ async test "serve_on_until rejects non-positive websocket_read_timeout_ms" {
 
 ///|
 async test "serve rejects non-positive websocket_read_timeout_ms" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let result : Result[Unit, Error] = try? app.serve(
     port=0,
     options=NativeServeOptions(websocket_read_timeout_ms=0),
@@ -2013,7 +2013,7 @@ async test "serve rejects non-positive websocket_read_timeout_ms" {
 
 ///|
 async test "serve_until rejects non-positive websocket_read_timeout_ms" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve(
     port=0,
@@ -2030,7 +2030,7 @@ async test "serve_until rejects non-positive websocket_read_timeout_ms" {
 
 ///|
 async test "serve_on rejects negative websocket_max_message_bytes" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let server = allocate_test_server()
   defer server.close()
   let result : Result[Unit, Error] = try? app.serve_on(
@@ -2047,7 +2047,7 @@ async test "serve_on rejects negative websocket_max_message_bytes" {
 
 ///|
 async test "serve_on_until rejects negative websocket_max_message_bytes" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let server = allocate_test_server()
   defer server.close()
   let shutdown = @async.Queue::new(kind=Unbounded)
@@ -2069,7 +2069,7 @@ async test "serve_on_until rejects negative websocket_max_message_bytes" {
 
 ///|
 async test "serve rejects negative websocket_max_message_bytes" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let result : Result[Unit, Error] = try? app.serve(
     port=0,
     options=NativeServeOptions(websocket_max_message_bytes=-1),
@@ -2084,7 +2084,7 @@ async test "serve rejects negative websocket_max_message_bytes" {
 
 ///|
 async test "serve_until rejects negative websocket_max_message_bytes" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve(
     port=0,
@@ -2102,14 +2102,14 @@ async test "serve_until rejects negative websocket_max_message_bytes" {
 
 ///|
 async test "serve_on times out slow request bodies" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let handled : Ref[Int] = Ref::new(0)
   app.post("/body", event => {
     handled.val += 1
     event.req.raw_body
   })
   app.get("/healthy", _ => "ok")
-  app.get("/__mocket_ready", _ => "ready")
+  app.get("/__app_ready", _ => "ready")
   @async.with_task_group(group => {
     let server = allocate_test_server()
     let port = server.addr.port()
@@ -2159,7 +2159,7 @@ async test "serve_on times out slow request bodies" {
 
 ///|
 async test "serve_until rejects negative max_request_body_bytes" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   let shutdown = @async.Queue::new(kind=Unbounded)
   let result : Result[Unit, Error] = try? app.serve(
     port=0,
@@ -2176,10 +2176,10 @@ async test "serve_until rejects negative max_request_body_bytes" {
 
 ///|
 async test "serve_on preserves head content-length for oversized requests" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/healthy", _ => "ok")
   app.get("/body", _ => "body")
-  app.get("/__mocket_ready", _ => "ready")
+  app.get("/__app_ready", _ => "ready")
   @async.with_task_group(group => {
     let server = allocate_test_server()
     let port = server.addr.port()
@@ -2222,7 +2222,7 @@ async test "serve_on preserves head content-length for oversized requests" {
 ///|
 async test "serve matches middleware base paths by segment boundary" {
   let log : Array[String] = []
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(
     (event, next) => {
       log.push(event.req.path())
@@ -2268,8 +2268,8 @@ async test "serve matches middleware base paths by segment boundary" {
 
 ///|
 async test "serve_on_until stops on shutdown signal" {
-  let app = @crescent.Mocket()
-  app.get("/__mocket_ready", _ => "ready")
+  let app = @crescent.App()
+  app.get("/__app_ready", _ => "ready")
   @async.with_task_group(group => {
     let server = allocate_test_server()
     let port = server.addr.port()
@@ -2279,7 +2279,7 @@ async test "serve_on_until stops on shutdown signal" {
     })
     wait_until_ready(port)
 
-    let (response, body) = @http.get(localhost_url(port, "/__mocket_ready"))
+    let (response, body) = @http.get(localhost_url(port, "/__app_ready"))
     assert_eq(response.code, 200)
     inspect(body.text(), content="ready")
 
@@ -2307,10 +2307,10 @@ async test "serve_on_until stops on shutdown signal" {
 
 ///|
 async test "serve_on_until broadcasts shutdown when the queue is closed" {
-  let app1 = @crescent.Mocket()
-  let app2 = @crescent.Mocket()
-  app1.get("/__mocket_ready", _ => "ready")
-  app2.get("/__mocket_ready", _ => "ready")
+  let app1 = @crescent.App()
+  let app2 = @crescent.App()
+  app1.get("/__app_ready", _ => "ready")
+  app2.get("/__app_ready", _ => "ready")
   @async.with_task_group(group => {
     let server1 = allocate_test_server()
     let server2 = allocate_test_server()
@@ -2362,8 +2362,8 @@ async test "serve_on_until broadcasts shutdown when the queue is closed" {
 
 ///|
 async test "serve_until binds by port and stops on shutdown signal" {
-  let app = @crescent.Mocket()
-  app.get("/__mocket_ready", _ => "ready")
+  let app = @crescent.App()
+  app.get("/__app_ready", _ => "ready")
   let start_offset = @async.now().to_int() % 20_000
   for attempt = 0; attempt < 2_048; attempt = attempt + 1 {
     let port = 40_000 + (start_offset + attempt) % 20_000
@@ -2387,9 +2387,7 @@ async test "serve_until binds by port and stops on shutdown signal" {
           }
         None => {
           wait_until_ready(port)
-          let (response, body) = @http.get(
-            localhost_url(port, "/__mocket_ready"),
-          )
+          let (response, body) = @http.get(localhost_url(port, "/__app_ready"))
           assert_eq(response.code, 200)
           inspect(body.text(), content="ready")
           shutdown.put(())
@@ -2422,7 +2420,7 @@ async test "serve_until binds by port and stops on shutdown signal" {
 
 ///|
 async test "serve mounts static assets by prefix" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.static_assets("/assets", TestStaticProvider::{  })
   with_test_server(app, port => {
     let (response1, body1) = @http.get(localhost_url(port, "/assets/hello.txt"))
@@ -2464,7 +2462,7 @@ async test "serve mounts static assets by prefix" {
 
 ///|
 async test "serve serves static assets from the root mount" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.static_assets("", TestStaticProvider::{  })
   @async.with_task_group(group => {
     let server = allocate_test_server()
@@ -2498,7 +2496,7 @@ async test "serve serves static assets from the root mount" {
 
 ///|
 async test "serve normalizes trailing-slash static mounts" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.static_assets("/assets/", TestStaticProvider::{  })
   with_test_server(app, port => {
     let (index_response, index_body) = @http.get(localhost_url(port, "/assets"))
@@ -2530,7 +2528,7 @@ async test "serve normalizes trailing-slash static mounts" {
 
 ///|
 async test "serve preserves content-encoding for encoded static assets" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.static_assets("/assets", EncodedStaticProvider::{  })
   with_test_server(app, port => {
     let (get_response, get_body) = issue_request(
@@ -2565,7 +2563,7 @@ async test "serve preserves content-encoding for encoded static assets" {
 
 ///|
 async test "serve preserves vary and last-modified on conditional static responses" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.static_assets("/assets", EncodedStaticProvider::{  })
   with_test_server(app, port => {
     let (get_response, get_body) = issue_request(
@@ -2631,7 +2629,7 @@ async test "serve preserves vary and last-modified on conditional static respons
 
 ///|
 async test "serve writes cookie headers" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/cookie", event => {
     event.res.set_cookie("session", "abc", path="/", http_only=true)
     "ok"
@@ -2652,7 +2650,7 @@ async test "serve writes cookie headers" {
 
 ///|
 async test "serve preserves explicit content-type headers without duplicates" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/custom", event => {
     event.res.headers.set("content-type", "application/custom")
     "ok"
@@ -2691,7 +2689,7 @@ async test "serve preserves explicit content-type headers without duplicates" {
 
 ///|
 async test "serve handles head fallback, method not allowed, and options" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/resource", event => {
     event.res.headers.set("X-Reply", "get")
     "payload"
@@ -2786,7 +2784,7 @@ async test "serve handles head fallback, method not allowed, and options" {
 
 ///|
 async test "serve binds by port and dispatches trace and connect routes" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.trace("/trace", _ => @crescent.HttpResponse(status_code=OK).body("trace"))
   app.connect("/connect", _ => {
     @crescent.HttpResponse(status_code=OK).body("connect")
@@ -2811,7 +2809,7 @@ async test "serve binds by port and dispatches trace and connect routes" {
 
 ///|
 async test "serve does not overmatch non-terminal double wildcards" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/files/**/meta", _ => "meta")
   app.post("/files/**/upload", _ => "upload")
   with_test_server(app, port => {
@@ -2880,7 +2878,7 @@ async test "serve does not overmatch non-terminal double wildcards" {
 ///|
 async test "serve handles websocket text and binary messages" {
   let log : Array[String] = []
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => log.push("open")
@@ -2920,7 +2918,7 @@ async test "serve handles websocket text and binary messages" {
 
 ///|
 async test "serve drops oldest buffered websocket messages on overflow when configured" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(peer) => {
@@ -2958,7 +2956,7 @@ async test "serve drops oldest buffered websocket messages on overflow when conf
 
 ///|
 async test "serve drops oldest buffered websocket messages by default" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(peer) => {
@@ -2993,7 +2991,7 @@ async test "serve drops oldest buffered websocket messages by default" {
 
 ///|
 async test "serve drops latest buffered websocket messages on overflow when configured" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(peer) => {
@@ -3032,7 +3030,7 @@ async test "serve drops latest buffered websocket messages on overflow when conf
 ///|
 async test "serve closes websocket clients after read timeout between messages" {
   let log : Array[String] = []
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/healthy", _ => "ok")
   app.ws("/ws", event => {
     match event {
@@ -3088,7 +3086,7 @@ async test "serve closes websocket clients after read timeout between messages" 
 ///|
 async test "serve closes oversized websocket text messages and stays healthy" {
   let log : Array[String] = []
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/healthy", _ => "ok")
   app.ws("/ws", event => {
     match event {
@@ -3157,7 +3155,7 @@ async test "serve closes oversized websocket text messages and stays healthy" {
 ///|
 async test "serve closes oversized websocket binary messages" {
   let log : Array[String] = []
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => log.push("open")
@@ -3214,7 +3212,7 @@ async test "serve closes oversized websocket binary messages" {
 ///|
 async test "serve treats websocket_max_message_bytes=0 as empty-message only" {
   let log : Array[String] = []
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/healthy", _ => "ok")
   app.ws("/ws", event => {
     match event {
@@ -3329,7 +3327,7 @@ async test "serve treats websocket_max_message_bytes=0 as empty-message only" {
 ///|
 async test "serve enforces websocket_max_message_bytes across multiple reads" {
   let log : Array[String] = []
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => log.push("open")
@@ -3391,7 +3389,7 @@ async test "serve enforces websocket_max_message_bytes across multiple reads" {
 ///|
 async test "serve rejects websocket upgrades for http-only routes" {
   let handled : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/ws", _ => {
     handled.val += 1
     "http route"
@@ -3451,7 +3449,7 @@ async test "serve rejects websocket upgrades for http-only routes" {
 ///|
 async test "serve accepts padded websocket handshake headers on matched routes" {
   let log : Array[String] = []
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(_) => log.push("open")
@@ -3479,7 +3477,7 @@ async test "serve accepts padded websocket handshake headers on matched routes" 
 async test "serve rejects invalid websocket handshakes on matched routes and stays healthy" {
   let opened : Ref[Int] = Ref::new(0)
   let closed : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/healthy", _ => "ok")
   app.ws("/ws", event => {
     match event {
@@ -3523,7 +3521,7 @@ async test "serve rejects invalid websocket handshakes on matched routes and sta
 async test "serve rejects unsupported websocket versions and non-get upgrades" {
   let opened : Ref[Int] = Ref::new(0)
   let closed : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/healthy", _ => "ok")
   app.ws("/ws", event => {
     match event {
@@ -3575,7 +3573,7 @@ async test "serve rejects unsupported websocket versions and non-get upgrades" {
 async test "serve closes the connection after rejected websocket upgrades" {
   let opened : Ref[Int] = Ref::new(0)
   let closed : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/healthy", _ => "ok")
   app.ws("/ws", event => {
     match event {
@@ -3631,7 +3629,7 @@ async test "serve rejects malformed websocket-like requests on websocket routes 
   let http_hits : Ref[Int] = Ref::new(0)
   let ws_opened : Ref[Int] = Ref::new(0)
   let ws_closed : Ref[Int] = Ref::new(0)
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/ws", _ => {
     http_hits.val += 1
     "http route"
@@ -3714,7 +3712,7 @@ async test "serve rejects malformed websocket-like requests on websocket routes 
 ///|
 async test "serve honors mixed-case static and websocket upgrade headers" {
   let log : Array[String] = []
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.static_assets("/assets", EncodedStaticProvider::{  })
   app.ws("/ws", event => {
     match event {
@@ -3771,7 +3769,7 @@ async test "serve honors mixed-case static and websocket upgrade headers" {
 
 ///|
 async test "serve matches grouped and dynamic websocket routes" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.group("/api", group => {
     group.ws("/room/:name", event => {
       match event {
@@ -3797,7 +3795,7 @@ async test "serve matches grouped and dynamic websocket routes" {
 
 ///|
 async test "serve keeps websocket subscriptions across events" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -3834,7 +3832,7 @@ async test "serve keeps websocket subscriptions across events" {
 
 ///|
 async test "serve lets close handlers publish to remaining websocket subscribers" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -3870,8 +3868,8 @@ async test "serve lets close handlers publish to remaining websocket subscribers
 
 ///|
 async test "serve isolates websocket channels per app" {
-  let app1 = @crescent.Mocket()
-  let app2 = @crescent.Mocket()
+  let app1 = @crescent.App()
+  let app2 = @crescent.App()
   app1.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -3916,7 +3914,7 @@ async test "serve isolates websocket channels per app" {
 
 ///|
 async test "serve isolates websocket channels per server invocation when reusing one app" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -3954,7 +3952,7 @@ async test "serve isolates websocket channels per server invocation when reusing
 
 ///|
 async test "serve isolates close-handler websocket fanout per reused app server" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -4006,8 +4004,8 @@ async test "serve isolates close-handler websocket fanout per reused app server"
 
 ///|
 async test "serve keeps other reused-app servers alive when one server is cancelled" {
-  let app = @crescent.Mocket()
-  app.get("/__mocket_ready", _ => "ready")
+  let app = @crescent.App()
+  app.get("/__app_ready", _ => "ready")
   app.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -4072,8 +4070,8 @@ async test "serve keeps other reused-app servers alive when one server is cancel
 
 ///|
 async test "serve_on_until sends going-away close to websocket clients on shutdown signal" {
-  let app = @crescent.Mocket()
-  app.get("/__mocket_ready", _ => "ready")
+  let app = @crescent.App()
+  app.get("/__app_ready", _ => "ready")
   app.ws("/ws", event => {
     match event {
       Message(peer, Text(text)) => peer.text(text)
@@ -4129,8 +4127,8 @@ async test "serve_on_until sends going-away close to websocket clients on shutdo
 
 ///|
 async test "serve_on_until broadcasts going-away close when the shutdown queue is closed" {
-  let app = @crescent.Mocket()
-  app.get("/__mocket_ready", _ => "ready")
+  let app = @crescent.App()
+  app.get("/__app_ready", _ => "ready")
   app.ws("/ws", event => {
     match event {
       Message(peer, Text(text)) => peer.text(text)
@@ -4229,8 +4227,8 @@ async test "serve_on_until broadcasts going-away close when the shutdown queue i
 
 ///|
 async test "serve_on_until queue close stops remaining reused websocket servers after cancellation" {
-  let app = @crescent.Mocket()
-  app.get("/__mocket_ready", _ => "ready")
+  let app = @crescent.App()
+  app.get("/__app_ready", _ => "ready")
   app.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -4331,8 +4329,8 @@ async test "serve_on_until queue close stops remaining reused websocket servers 
 
 ///|
 async test "serve_on_until shutdown signal wakes one reused websocket server" {
-  let app = @crescent.Mocket()
-  app.get("/__mocket_ready", _ => "ready")
+  let app = @crescent.App()
+  app.get("/__app_ready", _ => "ready")
   app.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -4566,8 +4564,8 @@ async test "serve_on_until shutdown signal wakes one reused websocket server" {
 
 ///|
 async test "serve_on_until queue close stops surviving reused websocket server after shutdown signal" {
-  let app = @crescent.Mocket()
-  app.get("/__mocket_ready", _ => "ready")
+  let app = @crescent.App()
+  app.get("/__app_ready", _ => "ready")
   app.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")
@@ -4777,8 +4775,8 @@ async test "serve_on_until queue close stops surviving reused websocket server a
 
 ///|
 async test "serve_on_until queue close broadcasts to remaining reused websocket servers after shutdown signal" {
-  let app = @crescent.Mocket()
-  app.get("/__mocket_ready", _ => "ready")
+  let app = @crescent.App()
+  app.get("/__app_ready", _ => "ready")
   app.ws("/hub", event => {
     match event {
       Open(peer) => peer.subscribe("room")

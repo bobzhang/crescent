@@ -35,7 +35,7 @@ Register `handle_cors` as middleware to enable CORS on all routes:
 ```moonbit nocheck
 ///|
 async fn main {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(@cors.handle_cors())
   app.get("/api/data", _ => "hello")
   app.serve(port=4000)
@@ -76,7 +76,7 @@ with credentials) and sets `Vary: Origin` for correct caching.
 ```mbt check
 ///|
 test "detect preflight" {
-  let event : @crescent.MocketEvent = {
+  let event : @crescent.Event = {
     req: @crescent.HttpRequest(
       Options,
       "/resource",
@@ -98,7 +98,7 @@ A regular `OPTIONS` request without the CORS headers is not a preflight:
 ```mbt check
 ///|
 test "regular options is not preflight" {
-  let event : @crescent.MocketEvent = {
+  let event : @crescent.Event = {
     req: @crescent.HttpRequest(
       Options,
       "/resource",
@@ -115,12 +115,12 @@ test "regular options is not preflight" {
 ## Low-Level Header Helpers
 
 For manual control, use `append_cors_preflight_headers` and
-`append_cors_headers` directly on a `MocketEvent`:
+`append_cors_headers` directly on a `Event`:
 
 ```mbt check
 ///|
 test "append cors headers" {
-  let event : @crescent.MocketEvent = {
+  let event : @crescent.Event = {
     req: @crescent.HttpRequest(
       Get,
       "/api",

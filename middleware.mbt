@@ -4,9 +4,7 @@ pub(all) struct MiddlewareNext(async () -> &Responder noraise)
 
 ///|
 /// A middleware function that receives a request event and a next continuation, and returns a response.
-pub(all) struct Middleware(
-  async (MocketEvent, MiddlewareNext) -> &Responder noraise
-)
+pub(all) struct Middleware(async (Event, MiddlewareNext) -> &Responder noraise)
 
 ///|
 fn normalize_middleware_base_path(base_path : String) -> String {
@@ -41,8 +39,8 @@ test "normalize_middleware_base_path keeps path without trailing slash" {
 
 ///|
 /// Adds a middleware to the app, optionally scoped to a base path prefix.
-pub fn Mocket::use_middleware(
-  self : Mocket,
+pub fn App::use_middleware(
+  self : App,
   middleware : Middleware,
   base_path? : String,
 ) -> Unit {
@@ -57,7 +55,7 @@ pub fn Mocket::use_middleware(
 // Execute middleware chain with path matching (onion model)
 async fn execute_middlewares(
   middlewares : Array[(String, Middleware)],
-  event : MocketEvent,
+  event : Event,
   final_handler : HttpHandler,
 ) -> &Responder noraise {
   // Fast path: no middleware registered
@@ -88,7 +86,7 @@ async fn execute_middlewares(
 async fn execute_middleware_chain(
   middlewares : Array[Middleware],
   index : Int,
-  event : MocketEvent,
+  event : Event,
   final_handler : HttpHandler,
 ) -> &Responder noraise {
   if index >= middlewares.length() {
@@ -106,7 +104,7 @@ async fn execute_middleware_chain(
 
 ///|
 async test "empty middleware list calls final handler directly" {
-  let event = MocketEvent::{
+  let event = Event::{
     req: HttpRequest(Get, "/test", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},
@@ -127,7 +125,7 @@ async test "single middleware wraps final handler" {
     order.push("mw-after")
     result
   }
-  let event = MocketEvent::{
+  let event = Event::{
     req: HttpRequest(Get, "/test", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},
@@ -161,7 +159,7 @@ async test "multiple middlewares execute in onion model order" {
     order.push("mw2-after")
     result
   }
-  let event = MocketEvent::{
+  let event = Event::{
     req: HttpRequest(Get, "/test", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},
@@ -187,7 +185,7 @@ async test "path-scoped middleware skips non-matching request" {
     order.push("api-mw")
     next()
   }
-  let event = MocketEvent::{
+  let event = Event::{
     req: HttpRequest(Get, "/test", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},
@@ -213,7 +211,7 @@ async test "path-scoped middleware executes for matching request" {
     order.push("api-mw")
     next()
   }
-  let event = MocketEvent::{
+  let event = Event::{
     req: HttpRequest(Get, "/api/users", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},

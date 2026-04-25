@@ -22,7 +22,7 @@ moon add bobzhang/crescent
 ```moonbit nocheck
 ///|
 async fn main {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/", _ => "Hello, Crescent!")
   app.serve(port=4000)
 }
@@ -100,8 +100,8 @@ You never write error-handling boilerplate.
 ```moonbit check
 ///|
 #warnings("-unused_value")
-fn build_app() -> @crescent.Mocket {
-  let app = @crescent.Mocket()
+fn build_app() -> @crescent.App {
+  let app = @crescent.App()
   let todos : Array[Todo] = [{ id: 1, title: "Learn MoonBit", done: false }]
   let next_id = Ref::Ref(2)
 
@@ -142,8 +142,8 @@ Register middleware before routes. They execute in onion order (first registered
 
 ```moonbit check
 ///|
-fn _build_app() -> @crescent.Mocket {
-  let app = @crescent.Mocket()
+fn _build_app() -> @crescent.App {
+  let app = @crescent.App()
 
   // Security headers on every response
   app.use_middleware(@middleware.security_headers())
@@ -179,7 +179,7 @@ fn _build_app() -> @crescent.Mocket {
 ```mbt check
 ///|
 async test "security headers middleware" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(@middleware.security_headers())
   app.get_raw("/test", fn(_) noraise { "ok" })
   let client = @test_client.TestClient(app)
@@ -192,7 +192,7 @@ async test "security headers middleware" {
 
 ///|
 async test "request ID middleware" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(@middleware.request_id())
   app.get_raw("/test", fn(_) noraise { "ok" })
   let client = @test_client.TestClient(app)
@@ -257,7 +257,7 @@ struct TodoInput {
 
 ///|
 async test "typed handler auto-maps errors" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.post("/todos", event => {
     let input : TodoInput = event.json()
     HttpResponse::created().json_value(input)
@@ -347,7 +347,7 @@ struct CreateResItem {
 ///|
 async test "resource CRUD" {
   let items : Array[ResItem] = [{ id: 1, name: "Alpha" }]
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.resource(
     "/items",
     ResourceConfig(
@@ -764,7 +764,7 @@ fn rate_limiter() -> Middleware {
 ```mbt check
 ///|
 test "param and param_int" {
-  let event = MocketEvent::{
+  let event = Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: { "id": "42", "name": "alice" },
@@ -776,7 +776,7 @@ test "param and param_int" {
 
 ///|
 test "require_param raises on missing" {
-  let event = MocketEvent::{
+  let event = Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},

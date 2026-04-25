@@ -1,7 +1,7 @@
 ///|
 /// Determines whether an incoming request is a CORS preflight request by checking
 /// for the OPTIONS method, an `Origin` header, and an `Access-Control-Request-Method` header.
-pub fn is_preflight_request(event : @crescent.MocketEvent) -> Bool {
+pub fn is_preflight_request(event : @crescent.Event) -> Bool {
   let origin = event.req.get_header("origin")
   let access_control_request_method = event.req.get_header(
     "access-control-request-method",
@@ -18,7 +18,7 @@ pub fn is_preflight_request(event : @crescent.MocketEvent) -> Bool {
 
 ///|
 fn resolve_allow_origin(
-  event : @crescent.MocketEvent,
+  event : @crescent.Event,
   configured_origin : String,
   credentials : Bool,
 ) -> String noraise {
@@ -45,7 +45,7 @@ fn resolve_allow_origin(
 /// When `credentials=true` and `origin="*"`, the request Origin is reflected
 /// instead (browsers reject `*` with credentials) and `Vary: Origin` is set.
 pub fn append_cors_preflight_headers(
-  event : @crescent.MocketEvent,
+  event : @crescent.Event,
   origin? : String = "*",
   methods? : String = "*",
   allow_headers? : String = "*",
@@ -70,7 +70,7 @@ pub fn append_cors_preflight_headers(
 /// `Access-Control-Expose-Headers`, and optionally `Access-Control-Allow-Credentials`)
 /// to the event's response for non-preflight requests.
 pub fn append_cors_headers(
-  event : @crescent.MocketEvent,
+  event : @crescent.Event,
   origin? : String = "*",
   methods? : String = "*",
   allow_headers? : String = "*",

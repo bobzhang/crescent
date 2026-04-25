@@ -31,19 +31,19 @@ fn localhost_url(port : Int, path : String) -> String {
 ///|
 async fn wait_until_ready(port : Int) -> Unit {
   @async.retry(FixedDelay(20), max_retry=50, () => {
-    let (response, _body) = @http.get(localhost_url(port, "/__mocket_ready"))
+    let (response, _body) = @http.get(localhost_url(port, "/__app_ready"))
     guard response.code == 200 else { raise ServerNotReady }
   })
 }
 
 ///|
 async fn with_test_server(
-  app : @crescent.Mocket,
+  app : @crescent.App,
   run_test : async (Int) -> Unit,
 ) -> Unit {
   let server = allocate_test_server()
   let port = server.addr.port()
-  app.get("/__mocket_ready", _ => "ready")
+  app.get("/__app_ready", _ => "ready")
   @async.with_task_group(group => {
     group.spawn_bg(no_wait=true, () => app.serve_on(server))
     wait_until_ready(port)
@@ -144,7 +144,7 @@ async test "static_file provider exposes file metadata" {
 
 ///|
 async test "static_file serves files and directory index" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.static_assets(
     "/assets",
     @static_file.StaticFileProvider(path="static_file/testdata"),
@@ -173,7 +173,7 @@ async test "static_file serves files and directory index" {
 
 ///|
 async test "static_file serves head and validates etags" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.static_assets(
     "/assets",
     @static_file.StaticFileProvider(path="static_file/testdata"),
@@ -282,7 +282,7 @@ async test "static_file serves head and validates etags" {
 
 ///|
 async test "static_file respects grouped mounts and blocks traversal" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.group("/api", group => {
     group.static_assets(
       "/assets",

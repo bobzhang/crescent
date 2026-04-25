@@ -11,7 +11,7 @@ CONCURRENCY=100
 unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY no_proxy NO_PROXY
 
 echo "=========================================="
-echo "  Mocket vs Node.js Benchmark"
+echo "  App vs Node.js Benchmark"
 echo "  $REQUESTS requests, $CONCURRENCY concurrent"
 echo "=========================================="
 echo ""
@@ -23,11 +23,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Build and start Mocket server
-echo "[1/3] Building and starting Mocket server..."
+# Build and start App server
+echo "[1/3] Building and starting App server..."
 cd "$ROOT_DIR"
-moon build benchmarks/mocket_bench --target native --release 2>&1 | tail -1
-"$ROOT_DIR/_build/native/release/build/benchmarks/mocket_bench/mocket_bench.exe" &
+moon build benchmarks/app_bench --target native --release 2>&1 | tail -1
+"$ROOT_DIR/_build/native/release/build/benchmarks/app_bench/app_bench.exe" &
 MOCKET_PID=$!
 
 # Start Node.js server
@@ -46,7 +46,7 @@ sleep 3
 
 # Verify servers are running
 echo "Verifying servers..."
-curl -sf http://127.0.0.1:3001/text > /dev/null && echo "  Mocket: OK" || echo "  Mocket: FAILED"
+curl -sf http://127.0.0.1:3001/text > /dev/null && echo "  App: OK" || echo "  App: FAILED"
 curl -sf http://127.0.0.1:3002/text > /dev/null && echo "  Node.js: OK" || echo "  Node.js: FAILED"
 curl -sf http://127.0.0.1:3003/text > /dev/null && echo "  Express: OK" || echo "  Express: FAILED"
 echo ""
@@ -65,7 +65,7 @@ echo "=========================================="
 echo "  Benchmark 1: Plain Text (GET /text)"
 echo "=========================================="
 echo ""
-run_bench "Mocket (MoonBit)" "http://127.0.0.1:3001/text"
+run_bench "App (MoonBit)" "http://127.0.0.1:3001/text"
 run_bench "Node.js (http)" "http://127.0.0.1:3002/text"
 run_bench "Express.js" "http://127.0.0.1:3003/text"
 
@@ -73,7 +73,7 @@ echo "=========================================="
 echo "  Benchmark 2: JSON Response (GET /json)"
 echo "=========================================="
 echo ""
-run_bench "Mocket (MoonBit)" "http://127.0.0.1:3001/json"
+run_bench "App (MoonBit)" "http://127.0.0.1:3001/json"
 run_bench "Node.js (http)" "http://127.0.0.1:3002/json"
 run_bench "Express.js" "http://127.0.0.1:3003/json"
 
@@ -81,7 +81,7 @@ echo "=========================================="
 echo "  Benchmark 3: Dynamic Route (GET /user/42)"
 echo "=========================================="
 echo ""
-run_bench "Mocket (MoonBit)" "http://127.0.0.1:3001/user/42"
+run_bench "App (MoonBit)" "http://127.0.0.1:3001/user/42"
 run_bench "Node.js (http)" "http://127.0.0.1:3002/user/42"
 run_bench "Express.js" "http://127.0.0.1:3003/user/42"
 

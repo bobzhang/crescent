@@ -68,8 +68,8 @@ struct ApiErrorDetail {
 // ---- Build an app (what AI agents write) ----
 
 ///|
-fn build_todo_app() -> @crescent.Mocket {
-  let app = @crescent.Mocket()
+fn build_todo_app() -> @crescent.App {
+  let app = @crescent.App()
   // In-memory store
   let todos : Array[Todo] = [
     { id: 1, title: "Learn MoonBit", done: true },
@@ -232,7 +232,7 @@ async test "full-stack: json round-trip preserves all fields" {
 
 ///|
 async test "full-stack: nested json with optional fields" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.post("/api/profile", event => {
     let profile : UserProfile = event.req.json()
     // Echo back with modification
@@ -259,7 +259,7 @@ async test "full-stack: nested json with optional fields" {
 ///|
 async test "full-stack: middleware chain with typed handlers" {
   let log : Array[String] = []
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   // Logging middleware
   app.use_middleware((event, next) => {
     log.push("before: \{event.req.http_method} \{event.req.url}")
@@ -282,7 +282,7 @@ async test "full-stack: middleware chain with typed handlers" {
 
 ///|
 async test "full-stack: event.json() shorthand parses request body" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.post("/api/todos", event => {
     // Use event.json() shorthand instead of event.req.json()
     let input : CreateTodo = event.json()
@@ -301,7 +301,7 @@ async test "full-stack: event.json() shorthand parses request body" {
 
 ///|
 async test "full-stack: require_param_int simplifies typed handlers" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/api/todos/:id", event => {
     // Use require_param_int instead of match + raise boilerplate
     let id = event.require_param_int("id")
@@ -321,7 +321,7 @@ async test "full-stack: require_param_int simplifies typed handlers" {
 
 ///|
 async test "full-stack: require_param for string params" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/api/users/:name/profile", event => {
     let name = event.require_param("name")
     @crescent.HttpResponse::ok().json_value(UserProfile::{

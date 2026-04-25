@@ -18,7 +18,7 @@ struct UserInput {
 
 ///|
 async fn main {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
 
   // Custom BodyReader: parse CSV from request body
   app.post("/csv", event => {

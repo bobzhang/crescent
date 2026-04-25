@@ -1,6 +1,6 @@
 ///|
 test "param returns string value" {
-  let event = @crescent.MocketEvent::{
+  let event = @crescent.Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: { "id": "42" },
@@ -11,7 +11,7 @@ test "param returns string value" {
 
 ///|
 test "param_int parses integer" {
-  let event = @crescent.MocketEvent::{
+  let event = @crescent.Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: { "id": "123" },
@@ -22,7 +22,7 @@ test "param_int parses integer" {
 
 ///|
 test "param_int returns none for non-integer" {
-  let event = @crescent.MocketEvent::{
+  let event = @crescent.Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: { "id": "abc" },
@@ -32,7 +32,7 @@ test "param_int returns none for non-integer" {
 
 ///|
 test "require_param returns value when present" {
-  let event = @crescent.MocketEvent::{
+  let event = @crescent.Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: { "name": "alice" },
@@ -43,7 +43,7 @@ test "require_param returns value when present" {
 
 ///|
 test "require_param raises HttpError when missing" {
-  let event = @crescent.MocketEvent::{
+  let event = @crescent.Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},
@@ -54,7 +54,7 @@ test "require_param raises HttpError when missing" {
 
 ///|
 test "require_param_int returns parsed integer" {
-  let event = @crescent.MocketEvent::{
+  let event = @crescent.Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: { "id": "42" },
@@ -65,7 +65,7 @@ test "require_param_int returns parsed integer" {
 
 ///|
 test "require_param_int raises on missing param" {
-  let event = @crescent.MocketEvent::{
+  let event = @crescent.Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},
@@ -76,7 +76,7 @@ test "require_param_int raises on missing param" {
 
 ///|
 test "require_param_int raises on non-integer value" {
-  let event = @crescent.MocketEvent::{
+  let event = @crescent.Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: { "id": "abc" },
@@ -87,7 +87,7 @@ test "require_param_int raises on non-integer value" {
 
 ///|
 test "require_param_int64 returns parsed int64" {
-  let event = @crescent.MocketEvent::{
+  let event = @crescent.Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: { "id": "9999999999" },
@@ -98,7 +98,7 @@ test "require_param_int64 returns parsed int64" {
 
 ///|
 test "require_param_int64 raises on non-integer" {
-  let event = @crescent.MocketEvent::{
+  let event = @crescent.Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: { "id": "not-a-number" },
@@ -109,7 +109,7 @@ test "require_param_int64 raises on non-integer" {
 
 ///|
 test "param_decoded URL-decodes the value" {
-  let event = @crescent.MocketEvent::{
+  let event = @crescent.Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: { "query": "hello%20world" },
@@ -120,7 +120,7 @@ test "param_decoded URL-decodes the value" {
 
 ///|
 test "param_decoded returns None when missing" {
-  let event = @crescent.MocketEvent::{
+  let event = @crescent.Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},

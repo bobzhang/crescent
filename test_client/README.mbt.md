@@ -5,13 +5,13 @@ synthetic requests, assert on the response, no network involved.
 
 Integration tests that spin up a real TCP listener are slow, flaky under
 parallel execution, and depend on port availability. `TestClient` skips
-all of that: it calls the same `Mocket::dispatch(...)` entry point the
+all of that: it calls the same `App::dispatch(...)` entry point the
 real server uses, runs the full middleware chain and handler pipeline,
 and returns a `TestResponse` you can pattern-match on. A typical test
 finishes in microseconds.
 
 ```moonbit nocheck
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/hello", _ => "world")
 
   let client = @test_client.TestClient(app)
@@ -22,7 +22,7 @@ finishes in microseconds.
 
 This package provides:
 
-- **`TestClient`** — wraps a `Mocket` app. One verb per HTTP method
+- **`TestClient`** — wraps a `App` app. One verb per HTTP method
   (`get`, `post`, `put`, `delete`) plus a generic `request` for anything
   else. Each call goes through routing + middleware + handler in the
   same order a real request would.
@@ -57,7 +57,7 @@ The four convenience verbs each take a path and optional `headers`:
 ```mbt check
 ///|
 async test "verb methods hit the right route" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/users", _ => "list")
   app.post("/users", _ => "created")
   app.put("/users/1", _ => "replaced")
@@ -79,7 +79,7 @@ tests:
 ```mbt check
 ///|
 async test "post with a JSON body round-trips" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.post("/echo", event => {
     let s : String = event.req.body()
     s
@@ -99,7 +99,7 @@ middleware that reads request headers, or for supplying auth tokens:
 ```mbt check
 ///|
 async test "headers reach the handler" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/whoami", event => {
     match event.req.get_header("Authorization") {
       Some(tok) => "tok:\{tok}"
@@ -120,7 +120,7 @@ For any other HTTP method (`PATCH`, `OPTIONS`, custom verbs), go through
 ```mbt check
 ///|
 async test "request handles arbitrary methods" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.patch("/todos/1", _ => "patched")
   let client = @test_client.TestClient(app)
   let res = client.request("PATCH", "/todos/1", headers={}, body=b"")
@@ -139,7 +139,7 @@ decoders.
 ```mbt check
 ///|
 async test "body_text decodes UTF-8" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/greet", _ => "héllo")
   let client = @test_client.TestClient(app)
   assert_eq(client.get("/greet").body_text(), "héllo")
@@ -165,7 +165,7 @@ struct Echo {
 
 ///|
 async test "body_json decodes a typed struct" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.post("/echo", event => {
     let input : Echo = event.json()
     @crescent.HttpResponse::ok().json_value(input)
@@ -187,7 +187,7 @@ headers at once:
 ```mbt check
 ///|
 async test "assert status and multiple headers" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/", _ => {
     @crescent.HttpResponse::ok().header("X-Custom", "v").body("ok")
   })

@@ -55,7 +55,7 @@ fn current_http_date() -> String {
 let ws_serve_runtime_counter : Ref[Int] = Ref::new(0)
 
 ///|
-fn next_ws_serve_runtime_id(app : Mocket) -> String {
+fn next_ws_serve_runtime_id(app : App) -> String {
   ws_serve_runtime_counter.val += 1
   "\{app.ws_runtime_id}/serve-\{ws_serve_runtime_counter.val}"
 }
@@ -350,8 +350,8 @@ async fn send_raw_response_async(
 }
 
 ///|
-fn Mocket::lookup_http_route(
-  self : Mocket,
+fn App::lookup_http_route(
+  self : App,
   http_method : String,
   request_path : String,
 ) -> HttpRouteLookup {
@@ -378,7 +378,7 @@ fn Mocket::lookup_http_route(
 ///|
 /// Applies a responder to a response and serializes pending cookies into
 /// `Set-Cookie` headers. Shared by the live serving path
-/// (`send_response_async`) and synthetic dispatch (`Mocket::dispatch`) so the
+/// (`send_response_async`) and synthetic dispatch (`App::dispatch`) so the
 /// two stay aligned: any bug in body materialization or cookie serialization
 /// would otherwise have to be fixed twice (see commits bb22108, eb6f24b).
 fn finalize_response_body(
@@ -647,7 +647,7 @@ async fn read_request_body_with_policy_async(
 }
 
 ///|
-/// Dispatches one inbound HTTP request through the Mocket pipeline.
+/// Dispatches one inbound HTTP request through the App pipeline.
 ///
 /// Called per-request by `run_native_server` (and by the graceful-shutdown
 /// accept loop in `serve_on`). Runs to completion once per request: this
@@ -681,8 +681,8 @@ async fn read_request_body_with_policy_async(
 /// The function does not raise; transport/IO errors surface through
 /// `send_response_async`'s early returns and are caught by the keep-alive
 /// loop in `serve_on` (which closes the connection on error).
-async fn Mocket::handle_request(
-  self : Mocket,
+async fn App::handle_request(
+  self : App,
   ws_runtime_id : String,
   request : @http.Request,
   body_reader : &@io.Reader,
@@ -690,7 +690,7 @@ async fn Mocket::handle_request(
   options : NativeServeOptions,
 ) -> Unit {
   // Target is the path *without* query string; query-string parsing happens
-  // lazily inside the handler via MocketEvent helpers.
+  // lazily inside the handler via Event helpers.
   let request_path = @httputil.request_target_path(request.path)
 
   // -------------------------------------------------------------------------
@@ -839,7 +839,7 @@ async fn Mocket::handle_request(
 
 ///|
 async fn run_native_server(
-  app : Mocket,
+  app : App,
   ws_runtime_id : String,
   server : @http.Server,
   options : NativeServeOptions,
@@ -888,8 +888,8 @@ async fn wait_for_shutdown_signal(shutdown : @async.Queue[Unit]) -> Unit {
 /// many milliseconds for in-flight requests to complete before force-cancelling.
 /// Otherwise shutdown is cancellation-based (active requests are aborted
 /// immediately).
-pub async fn Mocket::serve_on(
-  self : Mocket,
+pub async fn App::serve_on(
+  self : App,
   server : @http.Server,
   shutdown? : @async.Queue[Unit],
   options? : NativeServeOptions = NativeServeOptions(),
@@ -1015,8 +1015,8 @@ pub async fn Mocket::serve_on(
 /// after that many milliseconds waiting for the next inbound message.
 /// When `shutdown` is supplied, serving stops once the queue receives a unit
 /// or is closed. See `serve_on` for shutdown semantics.
-pub async fn Mocket::serve(
-  self : Mocket,
+pub async fn App::serve(
+  self : App,
   port~ : Int,
   shutdown? : @async.Queue[Unit],
   options? : NativeServeOptions = NativeServeOptions(),

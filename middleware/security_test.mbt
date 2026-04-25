@@ -1,6 +1,6 @@
 ///|
 async test "security_headers sets base headers by default" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(security_headers())
   app.get("/test", _ => "ok")
   let client = @test_client.TestClient(app)
@@ -23,7 +23,7 @@ async test "security_headers sets base headers by default" {
 
 ///|
 async test "security_headers with opt-in policy headers" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(
     security_headers(
       hsts="max-age=3600",
@@ -50,7 +50,7 @@ async test "security_headers with opt-in policy headers" {
 
 ///|
 async test "security_headers preserves handler-set headers" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   // Middleware runs after the handler in onion order; we install it first,
   // then the handler sets custom headers inside the chain via `event.res`.
   app.use_middleware(security_headers(csp="default-src 'self'"))
@@ -71,7 +71,7 @@ async test "security_headers preserves handler-set headers" {
 
 ///|
 async test "security_headers preserves handler response" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(security_headers())
   app.get("/hello", _ => "hello-response")
   let client = @test_client.TestClient(app)

@@ -6,9 +6,9 @@ struct BenchUser {
 
 ///|
 async fn main {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
 
-  // Plain text (baseline, same as mocket_bench)
+  // Plain text (baseline, same as app_bench)
   app.get("/text", _ => "Hello, World!")
 
   // JSON using old pattern (Json literal)
@@ -26,7 +26,7 @@ async fn main {
     @crescent.HttpResponse::ok().json_value(user)
   })
 
-  println("Mocket typed benchmark on port 3007")
+  println("App typed benchmark on port 3007")
   app.serve(port=3007) catch {
     err => println("Server error: \{err}")
   }

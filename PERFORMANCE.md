@@ -1,4 +1,4 @@
-# Mocket Performance Notes
+# App Performance Notes
 
 ## Current Benchmark (Apple M4, release build, 50K requests, 100 concurrent)
 
@@ -6,7 +6,7 @@
 |----------------------------------|---------|---------------|
 | Node.js http (baseline)          | 101,570 | 1.0ms         |
 | Raw MoonBit async (no framework) | 52,644  | 1.9ms         |
-| **Mocket** (full framework)      | 24,368  | 4.1ms         |
+| **App** (full framework)      | 24,368  | 4.1ms         |
 
 ## Bottleneck Analysis
 
@@ -20,7 +20,7 @@ parser (llhttp) works on raw bytes in C and converts to JS strings lazily.
 **Once MoonBit optimizes UTF-8 encoding/decoding, the native compilation
 advantages (no GC pauses, no JIT warmup) should close this gap.**
 
-### 2. Mocket framework overhead (~2.2x on top of raw async)
+### 2. App framework overhead (~2.2x on top of raw async)
 
 Inherent cost of routing, middleware dispatch, and response building.
 Already optimized: WebSocket check skip, body read skip for GET, middleware

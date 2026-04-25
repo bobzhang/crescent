@@ -1,6 +1,6 @@
 ///|
 async fn main {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   // Use get_raw to avoid the error-wrapping overhead on the hot path.
   // These handlers never raise, so automatic error mapping is pure cost.
   app.get_raw("/text", _ => "Hello, World!")
@@ -9,7 +9,7 @@ async fn main {
     let id = event.param("id").unwrap_or("0")
     ({ "id": id, "name": "User \{id}" } : Json)
   })
-  println("Mocket server listening on port 3001")
+  println("App server listening on port 3001")
   app.serve(port=3001) catch {
     err => println("Server error: \{err}")
   }

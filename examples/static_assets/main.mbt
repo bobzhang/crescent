@@ -1,6 +1,6 @@
 ///|
 async fn main {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.use_middleware(logger_middleware())
 
   // Mount static files under /assets — any file in ./public is served

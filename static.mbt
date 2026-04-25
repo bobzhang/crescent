@@ -284,8 +284,8 @@ fn if_modified_since_matches(header_value : String, mtime : Int64) -> Bool {
 
 ///|
 /// Mounts a static asset provider at the given path, serving files with ETag/Last-Modified caching and content negotiation.
-pub fn Mocket::static_assets(
-  self : Mocket,
+pub fn App::static_assets(
+  self : App,
   path : String,
   provider : &ServeStaticProvider,
 ) -> Unit {

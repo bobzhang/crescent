@@ -1,6 +1,6 @@
 ///|
 async test "fetch uses async client for request headers and payloads" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/", _ => "root")
   app.get("/fetch/hello", event => {
     let who = event.req.headers.get("x-name").unwrap_or("world").to_string()
@@ -89,7 +89,7 @@ async test "fetch preserves explicit content-type without duplicate request head
 
 ///|
 async test "fetch supports head and rejects unsupported protocols" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.head("/fetch/head", event => {
     event.res.headers.set("X-Reply", "head")
     @crescent.HttpResponse(status_code=NoContent).body("ignored")

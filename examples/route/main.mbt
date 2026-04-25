@@ -1,6 +1,6 @@
 ///|
 async fn main {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
 
   // Register global middleware
   app

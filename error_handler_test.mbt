@@ -1,6 +1,6 @@
 ///|
 test "custom not found handler is set" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.set_not_found_handler(_ => {
     @crescent.HttpResponse(status_code=NotFound).body("Custom 404")
   })
@@ -9,13 +9,13 @@ test "custom not found handler is set" {
 
 ///|
 test "not found handler defaults to none" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   inspect(app.has_not_found_handler(), content="false")
 }
 
 ///|
 test "group merges not found handler" {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.group("/api", group => {
     group.set_not_found_handler(_ => {
       @crescent.HttpResponse(status_code=NotFound).body("API 404")

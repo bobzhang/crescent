@@ -5,9 +5,7 @@ pub(all) suberror HttpError {
 } derive(Debug)
 
 ///|
-fn wrap_error_handler(
-  handler : async (MocketEvent) -> &Responder,
-) -> HttpHandler {
+fn wrap_error_handler(handler : async (Event) -> &Responder) -> HttpHandler {
   event => {
     handler(event) catch {
       HttpError(status, message) => HttpResponse::error(status, message)
@@ -28,7 +26,7 @@ fn wrap_error_handler(
       @utf8.Malformed(_) => HttpResponse::error(BadRequest, "invalid UTF-8")
       // Unknown errors: 500 — log the real error, return a generic message
       err => {
-        println("[mocket] unhandled error: \{err}")
+        println("[crescent] unhandled error: \{err}")
         HttpResponse::error(InternalServerError, "Internal Server Error")
       }
     }
@@ -38,7 +36,7 @@ fn wrap_error_handler(
 ///|
 async test "wrap_error_handler passes through success" {
   let handler = wrap_error_handler(_ => "ok")
-  let event = MocketEvent::{
+  let event = Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},
@@ -54,7 +52,7 @@ async test "wrap_error_handler catches HttpError" {
   let handler = wrap_error_handler(_event => {
     raise HttpError(BadRequest, "name is required")
   })
-  let event = MocketEvent::{
+  let event = Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},
@@ -75,7 +73,7 @@ async test "wrap_error_handler catches JsonDecodeError as 400" {
     let _ : Json = event.req.json()
     "ok"
   })
-  let event = MocketEvent::{
+  let event = Event::{
     req: HttpRequest(Post, "/", {}, raw_body=b"not valid json"),
     res: HttpResponse(status_code=OK),
     params: {},
@@ -88,7 +86,7 @@ async test "wrap_error_handler catches JsonDecodeError as 400" {
 ///|
 async test "wrap_error_handler catches unknown error as 500" {
   let handler = wrap_error_handler(_event => raise NetworkError)
-  let event = MocketEvent::{
+  let event = Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},
@@ -101,7 +99,7 @@ async test "wrap_error_handler catches unknown error as 500" {
 ///|
 async test "wrap_error_handler catches Failure as 500 with generic message" {
   let handler = wrap_error_handler(_event => fail("secret db connection string"))
-  let event = MocketEvent::{
+  let event = Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},
@@ -122,7 +120,7 @@ async test "HttpError with NotFound status" {
   let handler = wrap_error_handler(_event => {
     raise HttpError(NotFound, "user not found")
   })
-  let event = MocketEvent::{
+  let event = Event::{
     req: HttpRequest(Get, "/", {}, raw_body=b""),
     res: HttpResponse(status_code=OK),
     params: {},
@@ -134,100 +132,100 @@ async test "HttpError with NotFound status" {
 
 ///|
 /// Registers a GET handler with automatic error-to-JSON mapping.
-pub fn Mocket::get(
-  self : Mocket,
+pub fn App::get(
+  self : App,
   path : String,
-  handler : async (MocketEvent) -> &Responder,
+  handler : async (Event) -> &Responder,
 ) -> Unit {
   self.get_raw(path, wrap_error_handler(handler))
 }
 
 ///|
 /// Registers a POST handler with automatic error-to-JSON mapping.
-pub fn Mocket::post(
-  self : Mocket,
+pub fn App::post(
+  self : App,
   path : String,
-  handler : async (MocketEvent) -> &Responder,
+  handler : async (Event) -> &Responder,
 ) -> Unit {
   self.post_raw(path, wrap_error_handler(handler))
 }
 
 ///|
 /// Registers a PUT handler with automatic error-to-JSON mapping.
-pub fn Mocket::put(
-  self : Mocket,
+pub fn App::put(
+  self : App,
   path : String,
-  handler : async (MocketEvent) -> &Responder,
+  handler : async (Event) -> &Responder,
 ) -> Unit {
   self.put_raw(path, wrap_error_handler(handler))
 }
 
 ///|
 /// Registers a PATCH handler with automatic error-to-JSON mapping.
-pub fn Mocket::patch(
-  self : Mocket,
+pub fn App::patch(
+  self : App,
   path : String,
-  handler : async (MocketEvent) -> &Responder,
+  handler : async (Event) -> &Responder,
 ) -> Unit {
   self.patch_raw(path, wrap_error_handler(handler))
 }
 
 ///|
 /// Registers a DELETE handler with automatic error-to-JSON mapping.
-pub fn Mocket::delete(
-  self : Mocket,
+pub fn App::delete(
+  self : App,
   path : String,
-  handler : async (MocketEvent) -> &Responder,
+  handler : async (Event) -> &Responder,
 ) -> Unit {
   self.delete_raw(path, wrap_error_handler(handler))
 }
 
 ///|
 /// Registers a HEAD handler with automatic error-to-JSON mapping.
-pub fn Mocket::head(
-  self : Mocket,
+pub fn App::head(
+  self : App,
   path : String,
-  handler : async (MocketEvent) -> &Responder,
+  handler : async (Event) -> &Responder,
 ) -> Unit {
   self.head_raw(path, wrap_error_handler(handler))
 }
 
 ///|
 /// Registers an OPTIONS handler with automatic error-to-JSON mapping.
-pub fn Mocket::options(
-  self : Mocket,
+pub fn App::options(
+  self : App,
   path : String,
-  handler : async (MocketEvent) -> &Responder,
+  handler : async (Event) -> &Responder,
 ) -> Unit {
   self.options_raw(path, wrap_error_handler(handler))
 }
 
 ///|
 /// Registers a TRACE handler with automatic error-to-JSON mapping.
-pub fn Mocket::trace(
-  self : Mocket,
+pub fn App::trace(
+  self : App,
   path : String,
-  handler : async (MocketEvent) -> &Responder,
+  handler : async (Event) -> &Responder,
 ) -> Unit {
   self.trace_raw(path, wrap_error_handler(handler))
 }
 
 ///|
 /// Registers a CONNECT handler with automatic error-to-JSON mapping.
-pub fn Mocket::connect(
-  self : Mocket,
+pub fn App::connect(
+  self : App,
   path : String,
-  handler : async (MocketEvent) -> &Responder,
+  handler : async (Event) -> &Responder,
 ) -> Unit {
   self.connect_raw(path, wrap_error_handler(handler))
 }
 
 ///|
 /// Registers a handler matching all HTTP methods with automatic error-to-JSON mapping.
-pub fn Mocket::all(
-  self : Mocket,
+pub fn App::all(
+  self : App,
   path : String,
-  handler : async (MocketEvent) -> &Responder,
+  handler : async (Event) -> &Responder,
 ) -> Unit {
   self.all_raw(path, wrap_error_handler(handler))
 }

@@ -1,6 +1,6 @@
 ///|
 async fn main {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.ws("/ws", event => {
     match event {
       Open(peer) => println("WS open: " + peer.to_string())

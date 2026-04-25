@@ -1,6 +1,6 @@
 ///|
 async fn main {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   // Demonstrate cookie set/read flow.
   //
   // On the first visit the browser sends no cookies, so we see "new session"

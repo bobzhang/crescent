@@ -18,7 +18,7 @@ web programming. Every web concept is introduced before it is used.
 4. [Package Dependency Graph](#4-package-dependency-graph)
 5. [The Life of a Request](#5-the-life-of-a-request)
 6. [Core Type Map](#6-core-type-map)
-7. [The Mocket Application (`index.mbt`)](#7-the-mocket-application)
+7. [The App Type (`index.mbt`)](#7-the-app-type)
 8. [Routing: Mapping URLs to Code (`router/`)](#8-routing-mapping-urls-to-code)
 9. [Middleware: Cross-Cutting Concerns (`middleware.mbt`)](#9-middleware-cross-cutting-concerns)
 10. [Responder: Polymorphic Responses (`responder.mbt`)](#10-responder-polymorphic-responses)
@@ -178,7 +178,7 @@ Crescent lets you write a web server in MoonBit like this:
 
 ```moonbit
 async fn main {
-  let app = @crescent.Mocket()
+  let app = @crescent.App()
   app.get("/hello/:name", event => {
     let name = event.param("name").unwrap_or("World")
     "Hello, \{name}!"
@@ -211,7 +211,7 @@ graph TB
     end
 
     subgraph "Crescent Framework (root package)"
-        MOCKET["Mocket<br/>(Application)"]
+        MOCKET["App<br/>(Application)"]
         DISPATCH["dispatch()<br/>(Request Pipeline)"]
         MW["Middleware<br/>Chain"]
         HANDLER["HttpHandler /<br/>Typed Handler"]
@@ -363,7 +363,7 @@ Understanding this flow is essential for reasoning about where behavior lives.
 sequenceDiagram
     participant Client
     participant Runtime as serve_async<br/>(Native Runtime)
-    participant Mocket as Mocket<br/>(Application)
+    participant App as App<br/>(Application)
     participant Lookup as Route Lookup<br/>(static + radix)
     participant MW as Middleware<br/>Chain
     participant Handler as HttpHandler
@@ -374,26 +374,26 @@ sequenceDiagram
     Runtime->>Runtime: Read request body<br/>(with size limit + timeout)
 
     alt WebSocket upgrade detected
-        Runtime->>Mocket: find_ws_route(path)
-        Mocket-->>Runtime: (WebSocketHandler, params)
+        Runtime->>App: find_ws_route(path)
+        App-->>Runtime: (WebSocketHandler, params)
         Runtime->>Runtime: Upgrade connection,<br/>run WS event loop
     else Normal HTTP request
-        Runtime->>Mocket: lookup_http_route(method, path)
+        Runtime->>App: lookup_http_route(method, path)
 
         alt Route found
-            Mocket->>Lookup: 1. static_routes[method][path]?
-            Lookup-->>Mocket: O(1) hit or miss
-            Mocket->>Lookup: 2. dynamic_routes.search(method, path)
-            Lookup-->>Mocket: O(path_len) radix match + params
+            App->>Lookup: 1. static_routes[method][path]?
+            Lookup-->>App: O(1) hit or miss
+            App->>Lookup: 2. dynamic_routes.search(method, path)
+            Lookup-->>App: O(path_len) radix match + params
         end
         alt No route found
-            Mocket->>Lookup: 3. Check wildcard (*) routes
-            Mocket->>Mocket: allowed_methods() for 405 vs 404
+            App->>Lookup: 3. Check wildcard (*) routes
+            App->>App: allowed_methods() for 405 vs 404
         end
 
-        Mocket-->>Runtime: HttpRouteLookup::<br/>Found | MethodNotAllowed | Options | NotFound
+        App-->>Runtime: HttpRouteLookup::<br/>Found | MethodNotAllowed | Options | NotFound
 
-        Runtime->>Runtime: Construct MocketEvent<br/>{req, res, params}
+        Runtime->>Runtime: Construct Event<br/>{req, res, params}
         Runtime->>MW: execute_middlewares(middlewares, event, handler)
 
         loop Onion model (recursive)
@@ -439,7 +439,7 @@ you understand how they connect, you understand the framework.
 
 ```mermaid
 classDiagram
-    class Mocket {
+    class App {
         -base_path: String
         -route_keys: Array~(String, String)~
         -middlewares: Array~(String, Middleware)~
@@ -459,7 +459,7 @@ classDiagram
         +dispatch(method, url, headers, body)
     }
 
-    class MocketEvent {
+    class Event {
         +req: HttpRequest
         +res: HttpResponse
         +params: Map~String, StringView~
@@ -505,12 +505,12 @@ classDiagram
 
     class HttpHandler {
         <<type alias>>
-        async (MocketEvent) -> &Responder noraise
+        async (Event) -> &Responder noraise
     }
 
     class Middleware {
         <<type alias>>
-        async (MocketEvent, MiddlewareNext) -> &Responder noraise
+        async (Event, MiddlewareNext) -> &Responder noraise
     }
 
     class MiddlewareNext {
@@ -518,12 +518,12 @@ classDiagram
         async () -> &Responder noraise
     }
 
-    Mocket --> MocketEvent : creates per request
-    MocketEvent --> HttpRequest : contains
-    MocketEvent --> HttpResponse : contains
-    HttpHandler --> MocketEvent : receives
+    App --> Event : creates per request
+    Event --> HttpRequest : contains
+    Event --> HttpResponse : contains
+    HttpHandler --> Event : receives
     HttpHandler --> Responder : returns
-    Middleware --> MocketEvent : receives
+    Middleware --> Event : receives
     Middleware --> MiddlewareNext : receives
     Middleware --> Responder : returns
     Responder <|.. String : implements
@@ -536,8 +536,8 @@ classDiagram
 
 **Reading the diagram:**
 
-- `Mocket` is the application container. It stores routes and middleware.
-- For each incoming request, Mocket creates a `MocketEvent` containing the parsed
+- `App` is the application container. It stores routes and middleware.
+- For each incoming request, App creates a `Event` containing the parsed
   `HttpRequest`, a blank `HttpResponse`, and the extracted route `params`.
 - An `HttpHandler` is a function that receives this event and returns something
   implementing the `Responder` trait. It does not directly return HTTP bytes --
@@ -548,11 +548,11 @@ classDiagram
 
 ---
 
-## 7. The Mocket Application
+## 7. The App Type
 
 **File:** `index.mbt` (258 lines)
 
-`Mocket` is the central orchestrator. Think of it as a routing table combined
+`App` is the central orchestrator. Think of it as a routing table combined
 with a middleware stack. Its internal state is split by access pattern for
 performance:
 
@@ -593,7 +593,7 @@ When `app.on("GET", "/users/:id", handler)` is called (`index.mbt:57`):
 ### Route Groups
 
 Route groups let you factor out a common path prefix and shared middleware.
-`app.group("/api", configure)` (`index.mbt:185`) creates a child `Mocket`
+`app.group("/api", configure)` (`index.mbt:185`) creates a child `App`
 with `base_path = parent.base_path + "/api"`, calls the configure function,
 then **merges** all of the child's state (routes, middleware, WebSocket routes,
 not-found handler) back into the parent:
@@ -726,7 +726,7 @@ Middleware is a way to wrap handlers with reusable before/after logic.
 
 ```moonbit
 pub type MiddlewareNext = async () -> &Responder noraise
-pub type Middleware = async (MocketEvent, MiddlewareNext) -> &Responder noraise
+pub type Middleware = async (Event, MiddlewareNext) -> &Responder noraise
 ```
 
 A middleware receives the request event and a `next` continuation. It can:
@@ -880,8 +880,8 @@ them to `400 Bad Request`. That is boilerplate.
 
 | API            | Handler signature                              | Error handling         |
 |----------------|------------------------------------------------|------------------------|
-| `app.get_raw`  | `async (MocketEvent) -> &Responder noraise`    | None -- must not raise  |
-| `app.get`      | `async (MocketEvent) -> &Responder` (can raise)| Automatic mapping      |
+| `app.get_raw`  | `async (Event) -> &Responder noraise`    | None -- must not raise  |
+| `app.get`      | `async (Event) -> &Responder` (can raise)| Automatic mapping      |
 
 The "typed" variants (`get`, `post`, `put`, etc.) wrap the handler with
 `wrap_error_handler` (line 8), which is essentially a `try/catch` that converts
@@ -1098,7 +1098,7 @@ For each accepted TCP connection, the runtime:
 3. **Checks for WebSocket upgrade** by looking for `Connection: upgrade` and
    `Upgrade: websocket` headers.
 4. **Routes** the request through `lookup_http_route`.
-5. **Constructs** a `MocketEvent` and runs the middleware + handler pipeline.
+5. **Constructs** a `Event` and runs the middleware + handler pipeline.
 6. **Serializes** the response via the `Responder` trait's `options()` and
    `output()`/`output_bytes()` methods.
 7. **Writes** the response bytes to the TCP connection.
@@ -1210,12 +1210,12 @@ the root package no longer depends on `uri/` as a result.
 ### Test Client (`test_client/`)
 
 The `TestClient` dispatches requests through the full routing + middleware
-pipeline **without network I/O**. It calls `Mocket::dispatch()` directly, which
+pipeline **without network I/O**. It calls `App::dispatch()` directly, which
 constructs the event, runs middleware, calls the handler, and serializes the
 response -- all in-process.
 
 ```moonbit
-let app = Mocket()
+let app = App()
 app.get("/hello", fn(_) { "world" })
 let client = @test_client.TestClient(app)
 let resp = client.get("/hello")
@@ -1280,11 +1280,11 @@ responsibility:
 
 | File                         | Lines | Responsibility                                |
 |------------------------------|-------|-----------------------------------------------|
-| `index.mbt`                  | 258   | `Mocket` struct, route registration, groups   |
+| `index.mbt`                  | 258   | `App` struct, route registration, groups   |
 | `dispatch.mbt`               | 52    | `dispatch()` -- synthetic request pipeline    |
 | `handler.mbt`                | 3     | `HttpHandler` type alias                      |
 | `middleware.mbt`             | 233   | `Middleware` type, onion chain execution      |
-| `event.mbt`                  | 33    | `MocketEvent` struct, JSON/param helpers      |
+| `event.mbt`                  | 33    | `Event` struct, JSON/param helpers      |
 | `typed_handler.mbt`          | 233   | Error-wrapping handlers, typed `get/post/...` |
 | `path_match.mbt`             | 342   | Route lookup, allowed methods, WS routing     |
 | `param.mbt`                  | 112   | Route parameter extraction helpers            |
