@@ -69,10 +69,7 @@ test "parse_cookie_with_spaces" {
 test "parse_cookie_quoted" {
   let cookie_str = "name=\"value with spaces\"; name2=\"value2\""
   let cookies = parse_cookie(cookie_str)
-  assert_eq(
-    cookies.get("name").map(i => i.value),
-    Some("value with spaces"),
-  )
+  assert_eq(cookies.get("name").map(i => i.value), Some("value with spaces"))
   assert_eq(cookies.get("name2").map(i => i.value), Some("value2"))
 }
 
